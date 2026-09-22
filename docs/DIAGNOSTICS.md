@@ -14,6 +14,14 @@ off to hide it. Position and scale remain configurable. Expanded Hordes has no
 diagnostic hotkeys, buttons, test markers or other in-game commands. Debug Mode
 enables reports and memory sampling; profiling also polls Unity frame timings.
 
+The HUD is a compact status panel, not the report transcript. It emphasizes
+spawning state, living horde enemies and their cap, spawn budget, and performance
+from the last completed measurement window. It labels the window's age because
+those FPS/frame-time values are not an instantaneous reading. "Not spawning"
+does not mean the horde is finished. Unspawned budget is not enemies left to kill.
+Compatibility findings appear as a short count; owners, settings and coverage
+details remain in the reports. Missing data is distinct from zero.
+
 Reports are local in `diagnostics/` beside the DLL:
 
 - `performance.csv`: actual bucket intervals and numeric event/population data.
