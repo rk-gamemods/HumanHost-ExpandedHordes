@@ -187,7 +187,7 @@ internal static class TelemetryChecks
     private static void TestHud(Action<bool, string> check)
     {
         var c = new TelemetryCollector(0, new TelemetryBatch()); var hud = new TelemetryHud();
-        string initial = hud.Format(c, null, 0, 0, 0);
+        string initial = hud.Format(c, null, 0, 0);
         check(initial.Contains("Frame window unavailable") && initial.Contains("Alive unavailable/unavailable peak unavailable"),
             "HUD startup cannot display unsampled population or empty histogram as authoritative zero");
         check(initial.Contains("Placement failures/calls unavailable/unavailable") && initial.Contains("CPU/GPU delayed window ms unavailable/unavailable"),
@@ -199,16 +199,16 @@ internal static class TelemetryChecks
         hud.LifecycleAvailable = true; hud.PlacementAvailable = true; hud.CorpseEventsAvailable = false;
         hud.Detailed = false; hud.ManagedBytes = 1048576; hud.ManagedReadMs = 100;
         hud.CaptureWindow(c.Batch); c.Next(new TelemetryBatch(), 100);
-        string text = hud.Format(c, null, 3, 350, 2);
+        string text = hud.Format(c, null, 350, 2);
         check(text.Contains("| IDLE | light") && text.Contains("Registered fresh 1") && text.Contains("Window 0.1s, age 0.25s | FPS 10"),
             "HUD shows known idle state and labels completed aggregate duration and age");
         check(text.Contains("CPU/GPU delayed window ms 5/unavailable | samples 2/0") && text.Contains("Managed 1 MiB, age 0.25s"),
             "HUD preserves completed timing coverage and slow-memory value across batch reset");
-        check(text.Contains("Placement failures/calls 0/0") && text.Contains("adds/removes unavailable/unavailable") && text.Contains("marker 3"),
-            "HUD displays measured zero only for available hooks and keeps marker identity");
-        hud.Format(c, null, 3, 350, 2);
+        check(text.Contains("Placement failures/calls 0/0") && text.Contains("adds/removes unavailable/unavailable") && !text.Contains("marker"),
+            "HUD displays measured zero only for available hooks and has no marker controls or counters");
+        hud.Format(c, null, 350, 2);
         long before = GC.GetAllocatedBytesForCurrentThread(), started = Stopwatch.GetTimestamp();
-        for (int i = 0; i < 100; i++) text = hud.Format(c, null, 3, 350, 2);
+        for (int i = 0; i < 100; i++) text = hud.Format(c, null, 350, 2);
         long elapsed = Stopwatch.GetTimestamp() - started, allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         Console.WriteLine($"HOST HUD text formatter: {allocated / 100d:0.###} bytes/refresh; mean={elapsed * 1000000d / Stopwatch.Frequency / 100:0.###} us/refresh; excludes Unity GUIContent/style/draw and game adapters.");
         GC.KeepAlive(text);

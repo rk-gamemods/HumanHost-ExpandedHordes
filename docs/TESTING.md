@@ -5,7 +5,8 @@ and use a disposable world. Record the game build, mod version and other mods.
 
 - Confirm the game loads the plugin and its log names Expanded Hordes 0.2.0.
   Check for errors or disabled-feature messages. Confirm HHMM shows the friendly
-  name and 27 settings. Enable Debug Mode and restart to see catalog/event details.
+  name and current settings. Enable Debug Mode and restart to see the overlay
+  and catalog/event details.
 - Try base budget 10 and living target 3. At Horde Quantity 100%, expect a total
   budget of 10; at 200%, expect 20. Living target should stay 3. Confirm kills
   allow replacements and no new spawns arrive after the budget is exhausted.
@@ -29,7 +30,8 @@ and use a disposable world. Record the game build, mod version and other mods.
   ragdolls and hidden saved bodies are not the same as visible settled corpses.
 - Turn profiling on, restart and collect several 15-second samples during idle,
   a horde and heavy corpse accumulation. Missing CPU/GPU data must say unavailable.
-  Turn debug/profiling/HUD off and restart; extra summaries and new CSV rows should stop.
+  Turn Debug Mode and profiling off and restart; the overlay, extra summaries
+  and new CSV rows should stop.
 - Repeat relevant checks with other mods you normally use. A clean build does
   not establish that two mods work together or that high settings perform well.
 
@@ -45,10 +47,9 @@ results are separate from this gate; none of the following is checked off yet.
 - [ ] With all diagnostics off, verify no diagnostic-only hooks/writer are active.
   With light profiling on, verify `Zombie_Agent._Update` has no diagnostic patch.
   Enable detailed timings separately and confirm observed/timed/cap-skipped counts.
-- [ ] Verify F8-F11 and HUD position/scale with actual game controls and installed
-  mods. Check text refresh and draw cost separately. F9 alternates start/stop;
-  edit Test Marker Note and verify the next marker carries the note. F11 should
-  open only the local report folder after the first write.
+- [ ] Verify the overlay appears with Debug Mode and disappears when it is off.
+  Check HUD position/scale, text refresh and draw cost separately. Confirm there
+  are no diagnostic buttons or hotkeys and other mods' controls remain unchanged.
 - [ ] Compare failed spawn attempts, successful registration, saved restoration,
   confirmed death, live pool return, duplicate notification and reused identities.
   Verify the fresh/restored/death/other totals against visible/native state. Check
@@ -58,10 +59,14 @@ results are separate from this gate; none of the following is checked off yet.
   horde summaries at spawning stop and later survivor events without double-counting
   cumulative snapshots. Check native budget/effective corpse limits with features
   deliberately unavailable and with another mod setting a higher value.
-- [ ] Inspect the five-second post-load inventory and F10 rescan after another
-  plugin patches a shared method. Owner mappings must remain unresolved unless
-  an exact plugin GUID matches. Review report privacy before sharing.
-- [ ] Run diagnostics off; light profiling without HUD; debug + profiling + HUD;
+- [ ] Inspect automatic startup and five-second post-load inventories. Check
+  hotkey findings with two loaded plugins sharing a configured key and with
+  different modifiers. Change a binding and verify the inventory refreshes.
+  Findings must name both owners/settings and distinguish configured from
+  possible overlaps. Unreadable or hardcoded keys must remain unknown. Harmony
+  owner mappings must remain unresolved unless an exact plugin GUID matches.
+  Review report privacy before sharing.
+- [ ] Run diagnostics off; light profiling without Debug Mode; debug + profiling;
   and detailed timing. Match game/build/settings/mods, warm-up, camera, scenario,
   population trajectory and frame cap. Use at least three repetitions of each.
   Measure frame distributions and whole-process/GPU impact externally or through

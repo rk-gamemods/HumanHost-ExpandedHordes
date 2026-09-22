@@ -13,13 +13,13 @@ namespace UnityEngine
         public static uint GetLatestTimings(uint count, FrameTiming[] values)
         { values[0] = new FrameTiming { frameStartTimestamp = (ulong)Captures, cpuMainThreadFrameTime = 2, gpuFrameTime = 3 }; return 1; }
     }
-    internal enum KeyCode { F8, F9, F10, F11 }
+    internal enum KeyCode { None, F8, F9, F10, F11, LeftControl, LeftAlt }
     internal static class Input
     {
         internal static readonly HashSet<KeyCode> Pressed = new HashSet<KeyCode>();
         public static bool GetKeyDown(KeyCode key) => Pressed.Remove(key);
     }
-    internal struct Rect { public float width, height; public Rect(float x, float y, float w, float h) { width = w; height = h; } }
+    internal struct Rect { public float x, y, width, height; public Rect(float x, float y, float w, float h) { this.x = x; this.y = y; width = w; height = h; } }
     internal enum TextAnchor { UpperLeft }
     internal enum EventType { Repaint, Layout }
     internal sealed class Event { public static Event current = new Event(); public EventType type = EventType.Repaint; }
@@ -49,17 +49,14 @@ internal sealed class GPUI_Dead_Body_Mgr { }
 internal sealed class NPC_Horde_Mgr { }
 namespace ExpandedHordes
 {
+    internal static class ModIdentity { internal const string Guid = "expanded.hordes"; }
     internal sealed class TestSetting<T> { internal T Value; internal TestSetting(T value) { Value = value; } }
     internal static class ModSettings
     {
-        internal static TestSetting<bool> DebugHud = new TestSetting<bool>(false), DebugMode = new TestSetting<bool>(false),
+        internal static TestSetting<bool> DebugMode = new TestSetting<bool>(false),
             Profiling = new TestSetting<bool>(false), DetailedTimings = new TestSetting<bool>(false);
         internal static TestSetting<float> HudScale = new TestSetting<float>(1), HudX = new TestSetting<float>(0), HudY = new TestSetting<float>(0);
         internal static TestSetting<int> ReportFileMiB = new TestSetting<int>(5);
-        internal static TestSetting<string> MarkerNote = new TestSetting<string>("");
-        internal static TestSetting<UnityEngine.KeyCode> HudKey = new TestSetting<UnityEngine.KeyCode>(UnityEngine.KeyCode.F8),
-            MarkerKey = new TestSetting<UnityEngine.KeyCode>(UnityEngine.KeyCode.F9), RescanKey = new TestSetting<UnityEngine.KeyCode>(UnityEngine.KeyCode.F10),
-            FolderKey = new TestSetting<UnityEngine.KeyCode>(UnityEngine.KeyCode.F11);
     }
     internal enum Feature { Profiling, Diagnostics, CorpseDiagnostics, Catalog }
     internal static class FeatureRuntime

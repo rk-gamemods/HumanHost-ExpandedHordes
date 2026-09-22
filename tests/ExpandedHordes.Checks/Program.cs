@@ -103,6 +103,7 @@ internal static class Program
         MetadataChecks.Run(Check);
         RetentionChecks.Run(Check);
         WriterResourceChecks.Run(Check);
+        HotkeyChecks.Run(Check);
         HostModeChecks.Run(Check);
         ReportChecks.Run(Check);
         if (args.Length == 0) { Console.WriteLine($"PASS: {assertions} pure assertions. Native contracts skipped (no Managed directory supplied)."); return; }

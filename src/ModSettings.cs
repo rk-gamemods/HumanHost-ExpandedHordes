@@ -8,21 +8,13 @@ namespace ExpandedHordes
         internal static ConfigEntry<int> Total, Living, Allowance, LargeBegin, BossBegin, LargePercent, BossPercent, RunSpeedPercent;
         internal static ConfigEntry<float> AttractionHeight, AttractionRadius;
         internal static ConfigEntry<int> RegularResistance, LargeResistance, BossResistance, CorpseLimit;
-        internal static ConfigEntry<bool> DebugMode, Profiling, DebugHud, DetailedTimings;
-        internal static ConfigEntry<UnityEngine.KeyCode> HudKey, MarkerKey, RescanKey, FolderKey;
-        internal static ConfigEntry<string> MarkerNote;
+        internal static ConfigEntry<bool> DebugMode, Profiling, DetailedTimings;
         internal static ConfigEntry<float> HudScale;
         internal static ConfigEntry<int> HudX, HudY, ReportFileMiB;
 
         internal static void Bind(ConfigFile config)
         {
-            DebugHud = config.Bind("Diagnostics", "Debug HUD", false, "Cached telemetry overlay. Refreshes four times per second. Default off. Restart after changing settings.");
             DetailedTimings = config.Bind("Diagnostics", "Detailed Method Timings", false, "Advanced, requires Performance Profiling. Installs hot-method hooks and samples about 1/32 calls with at most 98 timed calls per bucket. Adds dispatch overhead even for skipped calls. Restart required.");
-            HudKey = config.Bind("Diagnostics", "HUD Toggle Key", UnityEngine.KeyCode.F8, "Toggle an enabled diagnostics overlay. Rebind if another mod uses this key.");
-            MarkerKey = config.Bind("Diagnostics", "Test Marker Key", UnityEngine.KeyCode.F9, "Add a numbered test-phase marker to the next bucket. Rebind if another mod uses this key.");
-            RescanKey = config.Bind("Diagnostics", "Inventory Rescan Key", UnityEngine.KeyCode.F10, "Explicitly recapture settings, loaded BepInEx plugins and Harmony overlaps for the next written batch.");
-            FolderKey = config.Bind("Diagnostics", "Report Folder Key", UnityEngine.KeyCode.F11, "Explicitly open the local diagnostics folder. No upload. Rebind if another mod uses this key.");
-            MarkerNote = config.Bind("Diagnostics", "Test Marker Note", "", "Optional note copied on the next marker key press, capped at 80 characters. Read at key press; can be changed in a config menu. Notes are included in local reports; do not enter personal information.");
             HudScale = config.Bind("Diagnostics", "HUD Scale", 1f, new ConfigDescription("Overlay scale.", new AcceptableValueRange<float>(0.5f, 2f)));
             HudX = BindInt(config, "Diagnostics", "HUD X", 20, 0, 7680, "Overlay left position in pixels.");
             HudY = BindInt(config, "Diagnostics", "HUD Y", 20, 0, 4320, "Overlay top position in pixels.");
@@ -34,7 +26,7 @@ namespace ExpandedHordes
             CorpseLimit = BindInt(config, "Corpses", "Retained Corpse Limit", 300, 1, 5000,
                 "How many nearby settled corpses the game's normal cleanup tries to retain. Default: 300, matching the vanilla menu's maximum. A higher limit keeps more bodies visible; it can reduce FPS and increase memory/save size. The higher of this setting and the game's current limit is used, so another mod's higher limit is respected. This affects the shared corpse pool, including ordinary zombies. Old corpses are removed to make room; corpses do not block new living horde spawns. Native expiry and distance cleanup still apply. This does not keep physical ragdolls active forever or guarantee stacked collision piles. The upper setting of 5,000 is untested.");
             DebugMode = config.Bind("Diagnostics", "Debug Mode", false,
-                "Enable numeric event/placement diagnostics and background reports, plus startup debug messages. Default off. Errors remain in the BepInEx log. Restart required.");
+                "Enable the debug HUD, numeric event/placement diagnostics, background reports and debug messages. The HUD indicates Debug Mode and has no separate toggle or hotkey. Default off. Errors remain in the BepInEx log. Restart after enabling diagnostics from all-off.");
             Profiling = config.Bind("Diagnostics", "Performance Profiling", false,
                 "Collect nominal 100 ms buckets, frame histograms, optional delayed CPU/GPU samples and 1 Hz managed memory/GC. Background writer flushes every 15 seconds into the diagnostics folder beside the DLL. Detailed Method Timings is separate and off by default. Missing measurements stay unavailable. Runtime overhead has not been certified. Restart required.");
             Total = BindInt(config, "Population", "Total Spawn Budget", 1000, 1, 50000,

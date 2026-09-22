@@ -13,5 +13,7 @@
     <Compile Include="../../src/TelemetryHud.cs" Link="TelemetryHud.cs" />
     <Compile Include="../../src/TelemetryMetadata.cs" Link="TelemetryMetadata.cs" />
     <Compile Include="../../src/PerformanceMonitor.cs" Link="PerformanceMonitor.cs" />
+    <Compile Include="../../src/HotkeyConflicts.cs" Link="HotkeyConflicts.cs" />
+    <Compile Include="../../src/HotkeyInventory.cs" Link="HotkeyInventory.cs" />
   </ItemGroup>
 </Project>

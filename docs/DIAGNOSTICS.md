@@ -2,27 +2,23 @@
 
 This implementation works toward [issue #1](https://github.com/rk-gamemods/HumanHost-ExpandedHordes/issues/1).
 The code builds and its pure/native-metadata checks pass. Unity execution and
-the issue's end-to-end performance acceptance remain unverified. Keep the issue
-open until the runtime checklist and gaps below are resolved.
-The [acceptance audit](ISSUE-1-ACCEPTANCE.md) also tracks unfinished requirements
-that can be resolved before play-testing.
+the issue's end-to-end performance acceptance remain unverified. The
+[acceptance audit](ISSUE-1-ACCEPTANCE.md) separates completed implementation work
+from the remaining runtime checks.
 
 ## Using it
 
-Enable Debug Mode, Performance Profiling and Debug HUD, then restart. Leave
-Detailed Method Timings off for ordinary tests. F8 toggles the overlay, F9 alternates
-numbered start/stop markers, F10 captures another environment/overlap inventory,
-and F11 explicitly opens the local report folder after its first write. Test
-Marker Note supplies an optional note, read at key press and capped at 80 characters.
-Rebind these keys if another mod uses them. HUD-only mode collects frames and
-events without starting the writer or CPU/GPU/memory sampling. Debug-only mode
+Enable Debug Mode and Performance Profiling, then restart. Leave Detailed Method
+Timings off for ordinary tests. The overlay follows Debug Mode; turn that setting
+off to hide it. Position and scale remain configurable. Expanded Hordes has no
+diagnostic hotkeys, buttons, test markers or other in-game commands. Debug Mode
 enables reports and memory sampling; profiling also polls Unity frame timings.
 
 Reports are local in `diagnostics/` beside the DLL:
 
 - `performance.csv`: actual bucket intervals and numeric event/population data.
 - `diagnostics.log`: window summaries, cumulative horde observations, sampled
-  method timings, data-loss counts, and explicit inventory rescans.
+  method timings, data-loss counts, and automatic inventory updates.
 - `environment.txt`: session settings, versions, assembly MVID build identity,
   hardware capacities, graphics configuration and BepInEx plugin inventory.
 
@@ -33,17 +29,27 @@ environment manifests are retained. Rotation can discard older history; session
 IDs identify records, but a retained row's old manifest may have rotated away.
 No report is uploaded. Share only after reviewing the files. The metadata
 allowlist excludes account/device IDs, machine/user names, absolute paths and
-third-party config/log contents. Metadata values containing paths, email-like
+unrelated third-party config/log contents. Hotkey findings include sanitized
+plugin/setting identifiers and typed key combinations. Metadata values containing paths, email-like
 identifiers, local user/machine names or account-like digit sequences are omitted.
 Control and directional-format characters are replaced. Values are capped at
 256 characters; the complete inventory is capped during construction at 16,384
-characters, including explicit truncation flags. Marker notes are user-supplied
-content and must still be reviewed before sharing.
+characters, including explicit truncation flags.
 
 Inventory includes BepInEx plugins and sanitized `Chainloader.DependencyErrors`.
 Harmony overlaps use exact installed owner IDs and original patch targets;
 unresolved owners remain labeled as unresolved. Optional inventory failure does
 not roll back installed gameplay features. An overlap does not prove a conflict.
+
+Compatibility inventories refresh at startup, five seconds after load and when
+observed bindings change. The hotkey check reads loaded BepInEx plugins' typed
+`KeyCode` and `KeyboardShortcut` settings. Findings identify both plugin owners,
+setting names and keys. Matching combinations are configured overlaps; shared
+keys with different modifiers are possible overlaps because activation behavior
+can differ. Hardcoded keys, native/Workshop controls, external tools, custom
+string settings and activation contexts are unknown. Reports explicitly label
+partial coverage and scan/report limits; no findings does not prove no conflicts.
+Expanded Hordes itself registers no shortcuts.
 
 Native registry investigation used Steam build 25448142. `Mod_Mgr.Categories`
 describes category metadata. `WorkshopMgr` manages Steam queries and installation.
@@ -153,14 +159,12 @@ Column names and order are defined by `TelemetryFileSink.Header`.
 - `fresh`, `restored`, `deaths`, `other_removed`, `corpse_added`, `corpse_removed`,
   `placement`, `placement_failed`, `context`, `context_failed`, `large`, `boss`
   are bucket event deltas with the scopes in the table above.
-- `marker` is the latest numbered marker pressed during the bucket (0 if none).
-  The log retains up to 16 timestamped marker notes per batch; extra notes are
-  counted as lost. Odd marker IDs start a test phase; even IDs stop it.
-  `dropped_batches` and `dropped_buckets` are cumulative and
+- `marker` is a reserved legacy field and remains zero in new sessions; old
+  reports may contain historical markers. `dropped_batches` and `dropped_buckets` are cumulative and
   known at publication; final unsaved data is also reported in BepInEx warnings.
 
-The log exports cumulative `lost_marker_notes_session` (overflow and rejected
-batches), `lost_metadata_snapshots_session` (overwritten or rejected inventories),
+The log retains `lost_marker_notes_session` as a zero-valued legacy field and exports
+`lost_metadata_snapshots_session` (overwritten or rejected inventories),
 and `lost_horde_summaries` (overwritten pending snapshots). Inventory records carry
 their capture time and publication batch. Each batch labels actual HUD/detail
 state, configured debug/profiling state and hook/engine-timing availability.
