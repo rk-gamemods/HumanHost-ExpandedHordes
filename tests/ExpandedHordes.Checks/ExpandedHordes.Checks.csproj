@@ -11,6 +11,7 @@
     <Compile Include="../../src/TelemetryWriter.cs" Link="TelemetryWriter.cs" />
     <Compile Include="../../src/TelemetryAccessors.cs" Link="TelemetryAccessors.cs" />
     <Compile Include="../../src/TelemetryHud.cs" Link="TelemetryHud.cs" />
+    <Compile Include="../../src/TelemetryHudRenderer.cs" Link="TelemetryHudRenderer.cs" />
     <Compile Include="../../src/TelemetryMetadata.cs" Link="TelemetryMetadata.cs" />
     <Compile Include="../../src/PerformanceMonitor.cs" Link="PerformanceMonitor.cs" />
     <Compile Include="../../src/HotkeyConflicts.cs" Link="HotkeyConflicts.cs" />

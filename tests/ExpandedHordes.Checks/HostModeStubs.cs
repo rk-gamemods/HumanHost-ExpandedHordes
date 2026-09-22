@@ -20,24 +20,84 @@ namespace UnityEngine
         public static bool GetKeyDown(KeyCode key) => Pressed.Remove(key);
     }
     internal struct Rect { public float x, y, width, height; public Rect(float x, float y, float w, float h) { this.x = x; this.y = y; width = w; height = h; } }
-    internal enum TextAnchor { UpperLeft }
+    internal enum TextAnchor { UpperLeft, UpperCenter, UpperRight, MiddleLeft, MiddleCenter, MiddleRight }
+    internal enum FontStyle { Normal, Bold }
+    internal enum TextClipping { Overflow, Clip }
+    internal struct Color
+    {
+        public float r, g, b, a;
+        public Color(float r, float g, float b, float a = 1) { this.r = r; this.g = g; this.b = b; this.a = a; }
+        public static Color white => new Color(1, 1, 1);
+    }
+    internal sealed class Texture2D { public static readonly Texture2D whiteTexture = new Texture2D(); }
+    internal struct Vector3 { public float x, y, z; public Vector3(float x, float y, float z) { this.x = x; this.y = y; this.z = z; } }
+    internal struct Quaternion { public static Quaternion identity => new Quaternion(); }
+    internal struct Matrix4x4
+    {
+        internal float X, Y, ScaleX, ScaleY;
+        public static Matrix4x4 identity => new Matrix4x4 { ScaleX = 1, ScaleY = 1 };
+        public static Matrix4x4 TRS(Vector3 position, Quaternion rotation, Vector3 scale) =>
+            new Matrix4x4 { X = position.x, Y = position.y, ScaleX = scale.x, ScaleY = scale.y };
+    }
+    internal sealed class Font { }
+    internal static class Screen { public static int width = 1280, height = 720; }
+    internal sealed class RectOffset
+    {
+        public int left, right, top, bottom;
+        public RectOffset() { }
+        public RectOffset(int left, int right, int top, int bottom) { this.left = left; this.right = right; this.top = top; this.bottom = bottom; }
+    }
+    internal sealed class GUIStyleState { public Color textColor = Color.white; }
     internal enum EventType { Repaint, Layout }
     internal sealed class Event { public static Event current = new Event(); public EventType type = EventType.Repaint; }
     internal sealed class GUIStyle
     {
         public TextAnchor alignment; public int fontSize; public bool richText, wordWrap;
+        public FontStyle fontStyle; public TextClipping clipping; public RectOffset padding = new RectOffset();
+        public Font font;
+        public GUIStyleState normal = new GUIStyleState();
         public GUIStyle() { } public GUIStyle(GUIStyle original) { }
         internal static int Layouts;
         public float CalcHeight(GUIContent content, float width) { Layouts++; return 300; }
     }
-    internal sealed class GUIContent { public string text; }
-    internal sealed class GUISkin { public GUIStyle box = new GUIStyle(); }
+    internal sealed class GUIContent { public string text; public GUIContent() { } public GUIContent(string text) { this.text = text; } public static readonly GUIContent none = new GUIContent(""); }
+    internal sealed class GUISkin { public GUIStyle box = new GUIStyle(), label = new GUIStyle(); }
+    internal sealed class GuiCommand
+    {
+        internal Rect Bounds; internal string Text; internal Color Color;
+        internal int FontSize; internal FontStyle FontStyle; internal TextAnchor Alignment; internal bool WordWrap;
+    }
     internal static class GUI
     {
         public static GUISkin skin = new GUISkin(); internal static int Draws;
-        public static void Box(Rect bounds, GUIContent content, GUIStyle style) { Draws++; }
+        public static Color color = Color.white;
+        public static Color contentColor = Color.white;
+        public static bool enabled = true;
+        public static int depth;
+        public static Matrix4x4 matrix = Matrix4x4.identity;
+        internal static bool Capture;
+        internal static readonly List<GuiCommand> Commands = new List<GuiCommand>();
+        private static void Record(Rect bounds, string text, GUIStyle style)
+        {
+            Draws++;
+            if (Capture) Commands.Add(new GuiCommand { Bounds = new Rect(matrix.X + bounds.x * matrix.ScaleX, matrix.Y + bounds.y * matrix.ScaleY,
+                    bounds.width * matrix.ScaleX, bounds.height * matrix.ScaleY), Text = text, Color = style == null ? color : style.normal.textColor,
+                FontSize = (int)Math.Round((style?.fontSize ?? 0) * matrix.ScaleY), FontStyle = style?.fontStyle ?? FontStyle.Normal,
+                Alignment = style?.alignment ?? TextAnchor.UpperLeft, WordWrap = style?.wordWrap ?? false });
+        }
+        public static void Box(Rect bounds, GUIContent content, GUIStyle style) => Record(bounds, content.text, style);
+        public static void Label(Rect bounds, GUIContent content, GUIStyle style) => Record(bounds, content.text, style);
+        public static void Label(Rect bounds, string text, GUIStyle style) => Record(bounds, text, style);
+        public static void DrawTexture(Rect bounds, Texture2D texture) => Record(bounds, null, null);
     }
-    internal static class Mathf { public static int RoundToInt(float value) => (int)Math.Round(value); }
+    internal static class Mathf
+    {
+        public static int RoundToInt(float value) => (int)Math.Round(value);
+        public static float Min(float a, float b) => Math.Min(a, b);
+        public static float Max(float a, float b) => Math.Max(a, b);
+        public static float Clamp(float value, float minimum, float maximum) => Math.Min(maximum, Math.Max(minimum, value));
+        public static float Clamp01(float value) => Clamp(value, 0, 1);
+    }
 }
 namespace HarmonyLib
 {

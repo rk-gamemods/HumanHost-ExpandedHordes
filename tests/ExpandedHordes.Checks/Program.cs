@@ -20,6 +20,11 @@ internal static class Program
 
     private static void Main(string[] args)
     {
+        if (args.Length == 2 && args[0] == "--hud-preview")
+        {
+            HudPresentationChecks.WritePreviews(args[1]);
+            return;
+        }
         Check(CombatRules.ResistLoss(100, 60, 50) == 80, "50% resistance halves 40 incoming damage");
         Check(CombatRules.ResistLoss(100, 60, 0) == 60, "Zero resistance preserves damage");
         Check(CombatRules.ResistLoss(100, -300, 50) == -100, "Reduced overkill remains lethal before native clamp");
@@ -105,6 +110,7 @@ internal static class Program
         WriterResourceChecks.Run(Check);
         HotkeyChecks.Run(Check);
         HostModeChecks.Run(Check);
+        HudPresentationChecks.Run(Check);
         ReportChecks.Run(Check);
         if (args.Length == 0) { Console.WriteLine($"PASS: {assertions} pure assertions. Native contracts skipped (no Managed directory supplied)."); return; }
         if (args.Length != 1) throw new ArgumentException("Pass the installed game's Managed directory for contract checks.");

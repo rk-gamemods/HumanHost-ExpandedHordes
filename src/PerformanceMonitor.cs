@@ -23,12 +23,9 @@ namespace ExpandedHordes
         private static double cachedNow;
         private static long lastHordeSummaryAttempt;
         private static string session, reportDirectory;
-        private static GUIStyle style;
-        private static GUIContent content;
-        private static Rect bounds;
+        private static HudSnapshot hudSnapshot;
+        private static TelemetryHudRenderer hudRenderer;
         private static float hudScale;
-        private static bool hudLayoutDirty;
-        private static string hotkeyText;
         internal static bool Active => active;
         internal static long WrongThreadEvents;
         internal static bool OnMain
@@ -68,7 +65,7 @@ namespace ExpandedHordes
             if (writerQuarantined) { Plugin.Log.LogWarning("Diagnostics requires a game restart after an incomplete writer shutdown."); return; }
             WrongThreadEvents = 0; cachedNow = 0; lastHordeSummaryAttempt = 0; lastTiming = 0;
             warnedWriter = false;
-            style = null; content = null;
+            hudSnapshot = null; hudRenderer = new TelemetryHudRenderer();
             GameTelemetry.RestoreDepth = GameTelemetry.DeathDepth = 0;
             hud = ModSettings.DebugMode.Value;
             persist = ModSettings.Profiling.Value || ModSettings.DebugMode.Value;
@@ -77,7 +74,6 @@ namespace ExpandedHordes
             session = DateTime.UtcNow.ToString("yyyyMMddTHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
             reportDirectory = Path.Combine(directory, "diagnostics");
             hudScale = ModSettings.HudScale.Value;
-            bounds = new Rect(ModSettings.HudX.Value, ModSettings.HudY.Value, 920 * hudScale, 260 * hudScale);
             GameTelemetry.Initialize();
             ScanHotkeys();
             if (persist) writer = new TelemetryWriter(new TelemetryFileSink(reportDirectory, session, CaptureInventory(), ModSettings.ReportFileMiB.Value * 1024L * 1024));
@@ -136,11 +132,8 @@ namespace ExpandedHordes
         private static void ScanHotkeys()
         {
             try { HotkeyInventory.Scan(); }
-            catch { HotkeyInventory.Failed(); hotkeyText = "Hotkey conflict scan unavailable; coverage unknown."; return; }
+            catch { HotkeyInventory.Failed(); Plugin.Log.LogWarning("Hotkey conflict scan unavailable; coverage unknown."); return; }
             var scan = HotkeyInventory.Current;
-            hotkeyText = scan.Summary;
-            for (int i = 0; i < Math.Min(4, scan.Findings.Count); i++) hotkeyText += "\n" + scan.Findings[i];
-            if (scan.Findings.Count > 4) hotkeyText += "\nAdditional overlaps are listed in the environment report.";
             Plugin.Log.LogInfo(scan.Summary);
             foreach (string finding in scan.Findings) Plugin.Log.LogWarning(finding);
         }
@@ -203,22 +196,13 @@ namespace ExpandedHordes
             hudData.PlacementAvailable = FeatureRuntime.Enabled(Feature.Diagnostics);
             hudData.CategoryAvailable = GameTelemetry.LifecycleAvailable && FeatureRuntime.Enabled(Feature.Catalog);
             hudData.DisabledFeatures = FeatureRuntime.DisabledSummary;
-            if (content == null) content = new GUIContent();
-            content.text = hudData.Format(collector, writer, now, WrongThreadEvents) + "\n" + hotkeyText;
-            hudLayoutDirty = true;
+            var scan = HotkeyInventory.Current;
+            hudSnapshot = hudData.BuildSnapshot(collector, writer, now, WrongThreadEvents, scan.PairCount, scan.Truncated);
         }
         internal static void Draw()
         {
-            if (!active || !hud || content == null || Event.current.type != EventType.Repaint) return;
-            if (style == null) style = new GUIStyle(GUI.skin.box) { alignment = TextAnchor.UpperLeft, fontSize = Mathf.RoundToInt(14 * hudScale), richText = false, wordWrap = true };
-            if (hudLayoutDirty)
-            {
-                // Recalculate only when cached text changes. Wrapped unavailable
-                // values and disabled-feature names must not be clipped by a fixed height.
-                bounds.height = style.CalcHeight(content, bounds.width) + 8 * hudScale;
-                hudLayoutDirty = false;
-            }
-            GUI.Box(bounds, content, style);
+            if (!active || !hud || hudSnapshot == null || Event.current.type != EventType.Repaint) return;
+            hudRenderer.Draw(hudSnapshot, ModSettings.HudX.Value, ModSettings.HudY.Value, hudScale);
         }
         internal static void Boundary(WindowEnd reason)
         {

@@ -48,11 +48,11 @@ internal static class HostModeChecks
                     (collector.Batch.ManagedBytes >= 0) == persistent, "Writer, inventory and memory sampling follow persistent mode only");
                 check(FrameTimingManager.Captures == (mode.Item2 ? 1 : 0) && FeatureRuntime.Installed.Contains(Feature.Profiling) == detailed,
                     "Engine timings require profiling; detailed hooks require both profiling and detailed option");
-                check(GUI.Draws == (mode.Item1 ? 1 : 0), "Debug mode automatically shows HUD; profiling alone draws no HUD");
-                int layouts = GUIStyle.Layouts; var cachedContent = Read<GUIContent>("content"); var cachedStyle = Read<GUIStyle>("style");
+                check((GUI.Draws > 0) == mode.Item1, "Debug mode automatically shows HUD; profiling alone draws no HUD");
+                int layouts = GUIStyle.Layouts; var cachedSnapshot = Read<HudSnapshot>("hudSnapshot"); var cachedRenderer = Read<TelemetryHudRenderer>("hudRenderer");
                 PerformanceMonitor.Draw();
-                check(GUIStyle.Layouts == layouts && ReferenceEquals(cachedContent, Read<GUIContent>("content")) && ReferenceEquals(cachedStyle, Read<GUIStyle>("style")) &&
-                    (!mode.Item1 || Read<Rect>("bounds").height > 300), "Draw reuses content/style/layout and accommodates the measured text height");
+                check(GUIStyle.Layouts == layouts && ReferenceEquals(cachedSnapshot, Read<HudSnapshot>("hudSnapshot")) && ReferenceEquals(cachedRenderer, Read<TelemetryHudRenderer>("hudRenderer")),
+                    "Draw reuses the cached snapshot and renderer without reformatting or text layout");
                 PerformanceMonitor.Record(TelemetryEvent.Fresh);
                 if (!mode.Item2)
                 {
@@ -99,7 +99,8 @@ internal static class HostModeChecks
             PerformanceMonitor.Start(failureRoot); PerformanceMonitor.Update();
             check(PerformanceMonitor.Active && !GameTelemetry.LifecycleAvailable && GameTelemetry.CorpseEventsAvailable && !PerformanceMonitor.Begin(ProfileSection.ZombieUpdate).Active,
                 "Failed lifecycle/detail hooks do not disable independent corpse collector or light host");
-            check(Read<GUIContent>("content").text.Contains("Disabled features: Diagnostics, Profiling"), "HUD reports disabled feature names without requiring log inspection");
+            check(Read<HudSnapshot>("hudSnapshot").RecordingWarning && Read<HudSnapshot>("hudSnapshot").Recording.Contains("unavailable"),
+                "HUD surfaces unavailable features as a concise warning and leaves feature details in reports");
             Write("nextTiming", 0d); PerformanceMonitor.Update();
             check(FrameTimingManager.Captures == 1, "Optional engine timing failure disables only timing and is not retried every frame");
             Write("nextInventory", 0d); PerformanceMonitor.Update();

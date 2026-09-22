@@ -157,8 +157,11 @@ restoration and save/load limitations remain.
 Debug Mode and Performance Profiling enable nominal 100 ms telemetry buckets.
 One background writer flushes CSV and readable summaries every 15 seconds into
 `diagnostics/` beside the DLL. Debug Mode also shows a cached overlay, refreshed
-at 4 Hz, with configurable position and scale. Turn Debug Mode off in mod settings
-to hide it. Expanded Hordes registers no hotkeys or in-game diagnostic commands.
+at 4 Hz, with configurable position and scale. The compact panel prioritizes
+spawning status, living horde enemies, spawn budget and average performance.
+Detailed counters and individual compatibility findings stay in the reports.
+Turn Debug Mode off in mod settings to hide it. Expanded Hordes registers no
+hotkeys or in-game diagnostic commands.
 Compatibility inventories refresh automatically at startup, five seconds after
 load and when observed bindings change. They check loaded BepInEx key settings
 for configured or possible overlaps, naming both owners and settings. Hardcoded,
