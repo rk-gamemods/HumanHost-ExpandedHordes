@@ -113,7 +113,6 @@ guarantee that bodies form solid, climbable piles. Removed corpses can lose loot
 | Retained Corpse Limit | 300 | 1-5,000 |
 | Debug Mode | Off | On / Off |
 | Performance Profiling | Off | On / Off |
-| Debug HUD | Off | On / Off; F8 toggle, configurable position/scale |
 | Detailed Method Timings | Off | Requires profiling; sampled, adds hook overhead |
 | Report File MiB | 5 | Per-stream rotation threshold, 1-64 MiB; keeps current and previous files |
 
@@ -157,10 +156,14 @@ restoration and save/load limitations remain.
 
 Debug Mode and Performance Profiling enable nominal 100 ms telemetry buckets.
 One background writer flushes CSV and readable summaries every 15 seconds into
-`diagnostics/` beside the DLL. Debug HUD adds a cached overlay, refreshed at 4 Hz.
-F8 toggles visibility, F9 alternates start/stop test markers, F10 rescans settings/plugins,
-and F11 explicitly opens the local report folder. Test Marker Note adds an optional note.
-Keys, position and scale are configurable; check for collisions with other mods.
+`diagnostics/` beside the DLL. Debug Mode also shows a cached overlay, refreshed
+at 4 Hz, with configurable position and scale. Turn Debug Mode off in mod settings
+to hide it. Expanded Hordes registers no hotkeys or in-game diagnostic commands.
+Compatibility inventories refresh automatically at startup, five seconds after
+load and when observed bindings change. They check loaded BepInEx key settings
+for configured or possible overlaps, naming both owners and settings. Hardcoded,
+native, external and custom string bindings remain unknown; see the
+[coverage limits](docs/DIAGNOSTICS.md#using-it).
 Detailed Method Timings is a separate advanced option, off by default. Light
 mode does not install the per-zombie timing hook. All diagnostics default off.
 

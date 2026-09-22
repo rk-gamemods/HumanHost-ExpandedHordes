@@ -16,7 +16,7 @@ namespace ExpandedHordes
         private static TelemetryHud hudData;
         private static readonly FrameTiming[] Timing = new FrameTiming[1];
         private static bool active, detail, persist, hud, timing, warnedWriter, writerQuarantined;
-        private static int mainThread, gc0, gc1, gc2, marker;
+        private static int mainThread, gc0, gc1, gc2;
         private static long origin;
         private static double nextSlow, nextTiming, nextHud, nextInventory;
         private static ulong lastTiming;
@@ -26,9 +26,9 @@ namespace ExpandedHordes
         private static GUIStyle style;
         private static GUIContent content;
         private static Rect bounds;
-        private static KeyCode hudKey, markerKey, rescanKey, folderKey;
         private static float hudScale;
         private static bool hudLayoutDirty;
+        private static string hotkeyText;
         internal static bool Active => active;
         internal static long WrongThreadEvents;
         internal static bool OnMain
@@ -66,20 +66,20 @@ namespace ExpandedHordes
         {
             if (active) return;
             if (writerQuarantined) { Plugin.Log.LogWarning("Diagnostics requires a game restart after an incomplete writer shutdown."); return; }
-            marker = 0; WrongThreadEvents = 0; cachedNow = 0; lastHordeSummaryAttempt = 0; lastTiming = 0;
+            WrongThreadEvents = 0; cachedNow = 0; lastHordeSummaryAttempt = 0; lastTiming = 0;
             warnedWriter = false;
             style = null; content = null;
             GameTelemetry.RestoreDepth = GameTelemetry.DeathDepth = 0;
-            hud = ModSettings.DebugHud.Value;
+            hud = ModSettings.DebugMode.Value;
             persist = ModSettings.Profiling.Value || ModSettings.DebugMode.Value;
             if (!hud && !persist) return;
             mainThread = Thread.CurrentThread.ManagedThreadId; origin = Stopwatch.GetTimestamp();
             session = DateTime.UtcNow.ToString("yyyyMMddTHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
-            hudKey = ModSettings.HudKey.Value; markerKey = ModSettings.MarkerKey.Value; rescanKey = ModSettings.RescanKey.Value;
-            folderKey = ModSettings.FolderKey.Value; reportDirectory = Path.Combine(directory, "diagnostics");
+            reportDirectory = Path.Combine(directory, "diagnostics");
             hudScale = ModSettings.HudScale.Value;
             bounds = new Rect(ModSettings.HudX.Value, ModSettings.HudY.Value, 920 * hudScale, 260 * hudScale);
             GameTelemetry.Initialize();
+            ScanHotkeys();
             if (persist) writer = new TelemetryWriter(new TelemetryFileSink(reportDirectory, session, CaptureInventory(), ModSettings.ReportFileMiB.Value * 1024L * 1024));
             collector = new TelemetryCollector(0, writer?.Initial ?? new TelemetryBatch());
             sampler = new DetailSampler(); hudData = new TelemetryHud(); active = true;
@@ -101,6 +101,7 @@ namespace ExpandedHordes
             try
             {
                 double now = Now; cachedNow = now;
+                hud = ModSettings.DebugMode.Value;
                 collector.Frame(now);
                 collector.ObserveHorde(GameTelemetry.HordeId, now);
                 if (collector.BucketDue(now))
@@ -124,26 +125,30 @@ namespace ExpandedHordes
                     lastHordeSummaryAttempt = collector.HordeSummarySequence;
                     Publish(now, newHordeSummary ? WindowEnd.HordeChange : WindowEnd.Cadence);
                 }
-                if (Input.GetKeyDown(hudKey)) hud = !hud;
-                if (Input.GetKeyDown(markerKey))
-                {
-                    string note = ModSettings.MarkerNote.Value ?? "";
-                    if (note.Length > 80) note = note.Substring(0, 80);
-                    note = note.Replace('\r', ' ').Replace('\n', ' ');
-                    collector.Mark(++marker, cachedNow, note);
-                }
-                if (persist && Input.GetKeyDown(folderKey))
-                {
-                    try { Process.Start(new ProcessStartInfo(reportDirectory) { UseShellExecute = true }); }
-                    catch { Plugin.Log.LogWarning("Could not open diagnostics folder; reports may not have been written yet."); }
-                }
-                if ((persist && now >= nextInventory) || (persist && Input.GetKeyDown(rescanKey)))
-                { nextInventory = double.PositiveInfinity; collector.SetMetadata(CaptureInventory(), now); }
+                if (now >= nextInventory) { nextInventory = double.PositiveInfinity; Rescan(); }
+                if (HotkeyInventory.Dirty) Rescan();
                 if (hud && now >= nextHud) { nextHud = now + 250; RefreshHud(now); }
                 if (writer != null && writer.Failed && !warnedWriter)
                 { warnedWriter = true; Plugin.Log.LogWarning("Diagnostics writer failed. Gameplay continues; unsaved batches are counted. Check report-folder permissions and free space."); }
             }
             catch (Exception ex) { Plugin.Log.LogError("Diagnostics stopped: " + ex.GetType().Name); Stop(); }
+        }
+        private static void ScanHotkeys()
+        {
+            try { HotkeyInventory.Scan(); }
+            catch { HotkeyInventory.Failed(); hotkeyText = "Hotkey conflict scan unavailable; coverage unknown."; return; }
+            var scan = HotkeyInventory.Current;
+            hotkeyText = scan.Summary;
+            for (int i = 0; i < Math.Min(4, scan.Findings.Count); i++) hotkeyText += "\n" + scan.Findings[i];
+            if (scan.Findings.Count > 4) hotkeyText += "\nAdditional overlaps are listed in the environment report.";
+            Plugin.Log.LogInfo(scan.Summary);
+            foreach (string finding in scan.Findings) Plugin.Log.LogWarning(finding);
+        }
+        private static void Rescan()
+        {
+            ScanHotkeys();
+            if (persist) collector.SetMetadata(CaptureInventory(), cachedNow);
+            nextHud = 0;
         }
         private static string CaptureInventory()
         {
@@ -199,7 +204,7 @@ namespace ExpandedHordes
             hudData.CategoryAvailable = GameTelemetry.LifecycleAvailable && FeatureRuntime.Enabled(Feature.Catalog);
             hudData.DisabledFeatures = FeatureRuntime.DisabledSummary;
             if (content == null) content = new GUIContent();
-            content.text = hudData.Format(collector, writer, marker, now, WrongThreadEvents);
+            content.text = hudData.Format(collector, writer, now, WrongThreadEvents) + "\n" + hotkeyText;
             hudLayoutDirty = true;
         }
         internal static void Draw()
@@ -242,6 +247,7 @@ namespace ExpandedHordes
             finally
             {
                 active = detail = false;
+                HotkeyInventory.Stop();
                 if (collector.DroppedBatches > droppedBeforeStop) Plugin.Log.LogWarning("Final diagnostics window could not be queued; session dropped buckets=" + collector.DroppedBuckets + "; lost marker notes=" + collector.LostMarkerNotes + "; lost metadata snapshots=" + collector.LostMetadataSnapshots);
                 if (writer != null && !writer.Stop(250))
                 { writerQuarantined = true; Plugin.Log.LogWarning("Diagnostics shutdown incomplete; unwritten batches=" + writer.Unwritten); }
