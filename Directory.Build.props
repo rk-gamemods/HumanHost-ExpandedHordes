@@ -1,0 +1,23 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)GamePaths.local.props"
+          Condition="Exists('$(MSBuildThisFileDirectory)GamePaths.local.props')" />
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <DebugType>portable</DebugType>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Authors>rk-gamemods</Authors>
+    <HumanHostManagedDir>$(HumanHostDir)/Human Host_Data/Managed</HumanHostManagedDir>
+    <BepInExCoreDir>$(HumanHostDir)/BepInEx/core</BepInExCoreDir>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(IsHumanHostMod)' == 'true'">
+    <Reference Include="BepInEx" HintPath="$(BepInExCoreDir)/BepInEx.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(BepInExCoreDir)/0Harmony.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(HumanHostManagedDir)/UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(HumanHostManagedDir)/UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="Assembly-CSharp" HintPath="$(HumanHostManagedDir)/Assembly-CSharp.dll" Private="false" />
+  </ItemGroup>
+</Project>

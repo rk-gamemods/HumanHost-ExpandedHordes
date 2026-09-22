@@ -1,0 +1,10 @@
+<Project>
+  <ItemGroup Condition="'$(IsHumanHostMod)' == 'true'">
+    <Reference Include="@(HumanHostRef)" HintPath="$(HumanHostManagedDir)/%(Identity).dll" Private="false" />
+  </ItemGroup>
+  <Target Name="CheckHumanHostInstall" BeforeTargets="ResolveAssemblyReferences" Condition="'$(IsHumanHostMod)' == 'true'">
+    <Error Condition="'$(HumanHostDir)' == ''" Text="Set HumanHostDir in GamePaths.local.props or pass -p:HumanHostDir=&quot;path to Human Host&quot;." />
+    <Error Condition="!Exists('$(HumanHostManagedDir)/Assembly-CSharp.dll')" Text="Human Host game assemblies were not found. Check HumanHostDir." />
+    <Error Condition="!Exists('$(BepInExCoreDir)/BepInEx.dll')" Text="BepInEx 5 was not found in the selected game installation." />
+  </Target>
+</Project>

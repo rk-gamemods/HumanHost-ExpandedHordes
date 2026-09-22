@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Copy to GamePaths.local.props and replace this example with your game folder. -->
+    <HumanHostDir>C:/Path/To/Human Host</HumanHostDir>
+  </PropertyGroup>
+</Project>
