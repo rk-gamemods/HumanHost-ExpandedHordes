@@ -5,6 +5,8 @@ using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.Emit;
 using System.Reflection.PortableExecutable;
+using System.Reflection;
+using System.Collections.Immutable;
 using ExpandedHordes;
 
 internal static class Program
@@ -98,8 +100,19 @@ internal static class Program
         Check(HordeRules.Category(80, 11, 11, 11, 40, 40) == 0, "Maximum chances leave 20 native slots");
 
         TelemetryChecks.Run(Check);
+        MetadataChecks.Run(Check);
+        RetentionChecks.Run(Check);
+        WriterResourceChecks.Run(Check);
+        HostModeChecks.Run(Check);
+        ReportChecks.Run(Check);
         if (args.Length == 0) { Console.WriteLine($"PASS: {assertions} pure assertions. Native contracts skipped (no Managed directory supplied)."); return; }
         if (args.Length != 1) throw new ArgumentException("Pass the installed game's Managed directory for contract checks.");
+        string gameDirectory = Directory.GetParent(Path.GetFullPath(args[0])).Parent.FullName;
+        using (var dll = new AssemblyContract(Path.Combine(gameDirectory, "BepInEx", "core", "BepInEx.dll")))
+        {
+            dll.Method("Chainloader", "get_DependencyErrors");
+            dll.Method("Chainloader", "get_PluginInfos");
+        }
         using (var dll = new AssemblyContract(Path.Combine(args[0], "Terrain.dll")))
         {
             dll.Method("NPC_Horde_Mgr", "_Start");
@@ -117,6 +130,17 @@ internal static class Program
             dll.Fields("NPC_Horde_Mgr", "_hordeSaveData", "_HordeZombieAll", "_ZombiesPioneerCount", "_ZombiesPerWaveAdd", "_MaxAllowActiveZombies", "_corHordeSpawn");
             dll.Fields("NPC_Spawner_Mgr", "NPC_Biomes");
             dll.Fields("Terrain_Loader_Manager", "BigTerraWidth", "_ins", "_biomesWidthDis");
+            dll.FieldType("NPC_Horde_Mgr", "_ins", "NPC_Horde_Mgr", true);
+            dll.FieldType("NPC_Horde_Mgr", "_aliveHordeNPCs", "Dictionary`2<GameObject,Horde_NPC_Info>");
+            dll.FieldType("NPC_Horde_Mgr", "_hordeSaveData", "Horde_Save_Data");
+            dll.FieldType("NPC_Horde_Mgr", "_corHordeSpawn", "Coroutine");
+            dll.FieldType("NPC_Horde_Mgr", "_G_Info", "Global_Infos");
+            dll.FieldType("NPC_Horde_Mgr", "_HordeZombieAll", "Int32");
+            dll.FieldType("NPC_Horde_Mgr", "_ZombiesPerWaveAdd", "Int32");
+            dll.FieldType("Terrain_Loader_Manager", "_ins", "Terrain_Loader_Manager", true);
+            dll.FieldType("Terrain_Loader_Manager", "BigTerraWidth", "Single");
+            dll.Fields("Horde_Save_Data", "spawnedWaveCount", "spawnedAlreadyCount", "spawnStartRealPos");
+            dll.Method("Terrain_Loader_Manager", "get_BiomesWidthDis");
         }
         using (var dll = new AssemblyContract(Path.Combine(args[0], "Global_Funcs.dll"))) dll.Fields("Global_Infos", "_totalGameMinutes");
         using (var dll = new AssemblyContract(Path.Combine(args[0], "AI.dll")))
@@ -134,6 +158,8 @@ internal static class Program
             dll.FieldReads("GPUI_Dead_Body_Mgr", "Spawn_GPUI_Dead_Body", "_MaxCorpseCount", 1);
             dll.Fields("GPUI_Dead_Body_Mgr", "_ActiveDeadBodies");
             dll.Fields("GPUI_Dead_Body_Mgr", "_ins");
+            dll.FieldType("GPUI_Dead_Body_Mgr", "_ins", "GPUI_Dead_Body_Mgr", true);
+            dll.FieldType("GPUI_Dead_Body_Mgr", "_ActiveDeadBodies", "Dictionary`2<GameObject,InsInfo>");
             dll.Method("GPUI_Dead_Body_Mgr", "Put_Back_Body_To_Pool", "bodyIns", "smashedBody", "fadeBloodDecal");
             dll.CollectionMutation("GPUI_Dead_Body_Mgr", "Spawn_GPUI_Dead_Body", "_ActiveDeadBodies", "Add");
             dll.CollectionMutation("GPUI_Dead_Body_Mgr", "Put_Back_Body_To_Pool", "_ActiveDeadBodies", "Remove");
@@ -172,6 +198,13 @@ internal static class Program
         {
             var actual = Type(type).GetFields().Select(reader.GetFieldDefinition).Select(f => reader.GetString(f.Name)).ToHashSet();
             foreach (string name in names) Check(actual.Contains(name), $"Field injection: {type}.{name}");
+        }
+        internal void FieldType(string type, string name, string expected, bool isStatic = false)
+        {
+            var field = Type(type).GetFields().Select(reader.GetFieldDefinition).Single(f => reader.GetString(f.Name) == name);
+            string actual = field.DecodeSignature(new TypeNames(), (object)null);
+            Check(actual == expected && ((field.Attributes & FieldAttributes.Static) != 0) == isStatic,
+                $"Compiled accessor contract {type}.{name}: expected {expected} static={isStatic}; found {actual}");
         }
         internal void FieldReads(string type, string methodName, string fieldName, int expected)
         {
@@ -242,5 +275,22 @@ internal static class Program
             }
             Check(count == 1, $"Unique verified collection mutation: {type}.{methodName} {fieldName}.{operation}");
         }
+    }
+    private sealed class TypeNames : ISignatureTypeProvider<string, object>
+    {
+        public string GetArrayType(string elementType, ArrayShape shape) => elementType + "[" + new string(',', shape.Rank - 1) + "]";
+        public string GetByReferenceType(string elementType) => elementType + "&";
+        public string GetFunctionPointerType(MethodSignature<string> signature) => "function";
+        public string GetGenericInstantiation(string genericType, ImmutableArray<string> typeArguments) => genericType + "<" + string.Join(",", typeArguments) + ">";
+        public string GetGenericMethodParameter(object context, int index) => "!!" + index;
+        public string GetGenericTypeParameter(object context, int index) => "!" + index;
+        public string GetModifiedType(string modifier, string unmodifiedType, bool isRequired) => unmodifiedType;
+        public string GetPinnedType(string elementType) => elementType;
+        public string GetPointerType(string elementType) => elementType + "*";
+        public string GetPrimitiveType(PrimitiveTypeCode code) => code.ToString();
+        public string GetSZArrayType(string elementType) => elementType + "[]";
+        public string GetTypeFromDefinition(MetadataReader reader, TypeDefinitionHandle handle, byte kind) => reader.GetString(reader.GetTypeDefinition(handle).Name);
+        public string GetTypeFromReference(MetadataReader reader, TypeReferenceHandle handle, byte kind) => reader.GetString(reader.GetTypeReference(handle).Name);
+        public string GetTypeFromSpecification(MetadataReader reader, object context, TypeSpecificationHandle handle, byte kind) => reader.GetTypeSpecification(handle).DecodeSignature(this, context);
     }
 }

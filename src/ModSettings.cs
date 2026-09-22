@@ -12,7 +12,7 @@ namespace ExpandedHordes
         internal static ConfigEntry<UnityEngine.KeyCode> HudKey, MarkerKey, RescanKey, FolderKey;
         internal static ConfigEntry<string> MarkerNote;
         internal static ConfigEntry<float> HudScale;
-        internal static ConfigEntry<int> HudX, HudY;
+        internal static ConfigEntry<int> HudX, HudY, ReportFileMiB;
 
         internal static void Bind(ConfigFile config)
         {
@@ -26,6 +26,8 @@ namespace ExpandedHordes
             HudScale = config.Bind("Diagnostics", "HUD Scale", 1f, new ConfigDescription("Overlay scale.", new AcceptableValueRange<float>(0.5f, 2f)));
             HudX = BindInt(config, "Diagnostics", "HUD X", 20, 0, 7680, "Overlay left position in pixels.");
             HudY = BindInt(config, "Diagnostics", "HUD Y", 20, 0, 4320, "Overlay top position in pixels.");
+            ReportFileMiB = BindInt(config, "Diagnostics", "Report File MiB", 5, 1, 64,
+                "Rotate each CSV/log after a batch reaches this many MiB. Keep current and previous files per stream; older history is discarded. One completed batch may exceed the threshold. Restart required.");
             RegularResistance = BindResistance(config, "Regular Zombie Resistance", 25);
             LargeResistance = BindResistance(config, "Large Zombie Resistance", 40);
             BossResistance = BindResistance(config, "Boss Resistance", 50);

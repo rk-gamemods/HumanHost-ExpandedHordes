@@ -5,9 +5,10 @@ namespace ExpandedHordes
     // Pure presentation of the shared collector. Unity owns only the cached GUIContent/style.
     internal sealed class TelemetryHud
     {
-        internal bool LifecycleAvailable, CorpseEventsAvailable, PlacementAvailable, Detailed;
+        internal bool LifecycleAvailable, CorpseEventsAvailable, PlacementAvailable, CategoryAvailable, Detailed;
         internal long ManagedBytes = -1;
         internal double ManagedReadMs = -1;
+        internal string DisabledFeatures = "none";
         private bool hasWindow;
         private double mean, p95, p99, maximum, startMs, endMs, spawnRate, cpu, gpu;
         private long cpuSamples, gpuSamples;
@@ -34,14 +35,16 @@ namespace ExpandedHordes
                 : "Frame window unavailable (waiting for first completed aggregate)";
             string memory = ManagedBytes < 0 ? "unavailable" : N(ManagedBytes / 1048576d) + " MiB, age " + N((now - ManagedReadMs) / 1000) + "s";
             return $"Expanded Hordes | {state} | {(Detailed ? "detailed" : "light")} | horde {N(s.Horde)}\n" +
-                $"Registered fresh {Count(t[0], LifecycleAvailable)} | restored {Count(t[1], LifecycleAvailable)} | budget/emitted {N(s.Budget)}/{N(s.Emitted)}\n" +
+                $"Registered fresh {Count(t[0], LifecycleAvailable)} | restored {Count(t[1], LifecycleAvailable)} | budget/emitted {N(s.Budget)}/{N(s.Emitted)} remaining {N(s.Remaining)}\n" +
                 $"Alive {N(s.Alive)}/{N(s.LivingTarget)} peak {N(collector.PeakAlive)} | deaths {Count(t[2], LifecycleAvailable)} | other removals {Count(t[3], LifecycleAvailable)}\n" +
                 $"Settled pool {N(s.Corpses)}/{N(s.CorpseLimit)} peak {N(collector.PeakCorpses)} | adds/removes {Count(t[4], CorpseEventsAvailable)}/{Count(t[5], CorpseEventsAvailable)}\n" +
                 $"Placement failures/calls {Count(t[7], PlacementAvailable)}/{Count(t[6], PlacementAvailable)} | last window fresh/min {(hasWindow && LifecycleAvailable ? N(spawnRate) : "unavailable")} | marker {marker}\n" +
+                $"Context failures/calls {Count(t[9], PlacementAvailable)}/{Count(t[8], PlacementAvailable)} | known fresh large/boss {Count(t[10], CategoryAvailable)}/{Count(t[11], CategoryAvailable)}\n" +
                 frame + "\n" +
                 $"CPU/GPU delayed window ms {N(cpuSamples > 0 ? cpu : -1)}/{N(gpuSamples > 0 ? gpu : -1)} | samples {cpuSamples}/{gpuSamples}\n" +
                 $"Managed {memory} | writer {(writer == null ? "off" : writer.Failed ? "FAILED" : "active")} pending {writer?.Unwritten ?? 0}\n" +
-                $"Lost buckets {collector.DroppedBuckets} | rejected off-thread events {rejected} | lifecycle/placement/corpse {(LifecycleAvailable ? "on" : "UNAVAILABLE")}/{(PlacementAvailable ? "on" : "UNAVAILABLE")}/{(CorpseEventsAvailable ? "on" : "UNAVAILABLE")}";
+                $"Lost buckets/markers/inventories {collector.DroppedBuckets}/{collector.LostMarkerNotes}/{collector.LostMetadataSnapshots} | rejected off-thread {rejected} | lifecycle/placement/corpse {(LifecycleAvailable ? "on" : "UNAVAILABLE")}/{(PlacementAvailable ? "on" : "UNAVAILABLE")}/{(CorpseEventsAvailable ? "on" : "UNAVAILABLE")}\n" +
+                $"Disabled features: {DisabledFeatures}";
         }
     }
 }

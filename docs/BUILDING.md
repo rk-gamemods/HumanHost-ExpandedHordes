@@ -18,7 +18,8 @@ dotnet build src/ExpandedHordes.csproj -c Release
 dotnet run --project tests/ExpandedHordes.Checks -c Release -- 'C:/Path/To/Human Host/Human Host_Data/Managed'
 ```
 
-Replace the test command's example path too. Alternatively, supply the game path
+The installed-assembly checks also inspect `BepInEx/core/BepInEx.dll` in the
+corresponding game root. Replace the test command's example path too. Alternatively, supply the game path
 directly when building:
 
 ```powershell

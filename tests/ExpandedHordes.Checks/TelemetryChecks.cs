@@ -68,6 +68,7 @@ internal static class TelemetryChecks
         for (int i = 1; i <= 17; i++) reconcile.Mark(i, 300, "phase");
         check(reconcile.Batch.MarkerCount == 16 && reconcile.Batch.LostMarkerNotes == 1 && reconcile.Batch.Markers[0].Id == 1, "Marker notes are bounded with visible loss");
         TestHordeWindows(check);
+        BoundaryChecks.Run(check);
         TestTimingCompletion(check);
         TestAccessorsAndTransitions(check);
         TestHud(check);

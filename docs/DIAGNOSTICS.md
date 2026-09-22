@@ -27,13 +27,30 @@ Reports are local in `diagnostics/` beside the DLL:
   hardware capacities, graphics configuration and BepInEx plugin inventory.
 
 Each CSV/log retains at most a current and previous file, rotating after a batch
-at about 5 MiB. Each new session also rotates the current data/log files. Two
+at the Report File MiB threshold (default 5, configurable from 1 to 64). A file
+can exceed that threshold by one batch. Each new session also rotates the current data/log files. Two
 environment manifests are retained. Rotation can discard older history; session
 IDs identify records, but a retained row's old manifest may have rotated away.
 No report is uploaded. Share only after reviewing the files. The metadata
 allowlist excludes account/device IDs, machine/user names, absolute paths and
-third-party config/log contents. Path-like metadata is omitted. Inventories
-longer than 16,384 characters are truncated with an explicit flag.
+third-party config/log contents. Metadata values containing paths, email-like
+identifiers, local user/machine names or account-like digit sequences are omitted.
+Control and directional-format characters are replaced. Values are capped at
+256 characters; the complete inventory is capped during construction at 16,384
+characters, including explicit truncation flags. Marker notes are user-supplied
+content and must still be reviewed before sharing.
+
+Inventory includes BepInEx plugins and sanitized `Chainloader.DependencyErrors`.
+Harmony overlaps use exact installed owner IDs and original patch targets;
+unresolved owners remain labeled as unresolved. Optional inventory failure does
+not roll back installed gameplay features. An overlap does not prove a conflict.
+
+Native registry investigation used Steam build 25448142. `Mod_Mgr.Categories`
+describes category metadata. `WorkshopMgr` manages Steam queries and installation.
+`ModBrowserBridge.RefreshInstalledIds` reads installation records;
+`DetectManualInstalledMods` checks subscriptions, install locations and file
+presence. None establishes which content is active in the running game. Native
+and Workshop loaded-content coverage therefore remains explicitly unavailable.
 
 ## Ownership and failure behavior
 
@@ -113,6 +130,11 @@ state is sampled at its end. Horde histograms track frames throughout the
 observation. Worst completed window FPS uses the horde's own nominal 15-second
 frame intervals, independent of partial file publications. Full spanning frames
 are retained; a short observation with no full interval reports unavailable.
+Pause emits a partial cumulative snapshot. A bucket spanning observation changes
+counts as lost for each observation it overlaps if its batch is rejected; these
+per-observation losses are not additive session totals. Same-timestamp events can
+produce a zero-duration bucket, while empty explicit boundaries carry only their
+reason and pending summary/metadata. Neither invents frames or elapsed time.
 Timing finalizers that finish after a publication do not contribute duration to
 either window. Selected and completed counts expose that incomplete coverage.
 
@@ -137,6 +159,16 @@ Column names and order are defined by `TelemetryFileSink.Header`.
   `dropped_batches` and `dropped_buckets` are cumulative and
   known at publication; final unsaved data is also reported in BepInEx warnings.
 
+The log exports cumulative `lost_marker_notes_session` (overflow and rejected
+batches), `lost_metadata_snapshots_session` (overwritten or rejected inventories),
+and `lost_horde_summaries` (overwritten pending snapshots). Inventory records carry
+their capture time and publication batch. Each batch labels actual HUD/detail
+state, configured debug/profiling state and hook/engine-timing availability.
+Empty aggregate frame distributions are `unavailable`; a zero raw frame count or
+sum is still a valid count. Remaining budget is `max(0, budget - emitted)` only
+when both native values are known. Horde reports also include game time, region,
+context failures and sampled time below target.
+
 Histogram percentiles live in window/horde summaries, never individual buckets.
 They must not be averaged. The histogram includes long frames in count/sum/max
 even when their percentile falls into overflow.
@@ -154,10 +186,14 @@ your game path as described in [BUILDING.md](BUILDING.md). Tests exercise regula
 buckets, boundary/stall/partial-stop behavior, histogram merge/overflow/reset,
 separate event counters, horde snapshots, reconciliation, sampler fairness and
 phase coverage, queue saturation, I/O failure, bounded shutdown and real CSV
-rotation/readback under a non-English culture.
+rotation/readback under a non-English culture. Production host mode tests use
+test doubles at the Unity/game/configuration/Harmony-installation boundary while
+executing the actual host, collector and file writer. They verify forbidden
+component work, optional-failure isolation and cached HUD asset/layout reuse;
+they do not execute or benchmark native detours or Unity GUI rendering.
 
 On 2026-09-22, an AMD Ryzen 7 9800X3D Windows host, .NET 8 check target built with
-SDK 10.0.401, passed 359 assertions and a zero-warning plugin build against
+SDK 10.0.401, passed 471 assertions and a zero-warning plugin build against
 Unity 2022.3 / BepInEx 5.4.23.5. Representative synthetic results:
 
 | Check | Observed result |
@@ -165,24 +201,28 @@ Unity 2022.3 / BepInEx 5.4.23.5. Representative synthetic results:
 | Warmed event/frame/bucket/batch-reset loop | 0 allocated bytes on the calling host thread. |
 | 1,000 and 10,000 event callbacks/s, 2,000 simulated seconds each | Fixed memory; population inputs 1,000 living and 5,000 corpses. No game entities created. |
 | Pure `CloseBucket` timing, 10,000 retained samples | Median below 0.1 us clock resolution, p95/p99 0.1/0.1 us; observed maxima varied between runs. This excludes game adapters, histogram reset and handoff. |
-| Numeric collector, four batches and sampler | 338,016 allocated bytes; bucket layout 248 bytes on host. Excludes metadata, streams, thread/runtime and UI assets. |
-| One warmed synthetic 150-bucket serialization plus buffered flush | About 0.219 ms and 151,616 allocated bytes. The worker is not allocation-free. Filesystem timing is not a worst-case bound. |
+| Numeric collector, four batches and sampler | 347,864 allocated bytes; bucket layout 264 bytes on host. Excludes metadata, streams, thread/runtime and UI assets. |
+| One warmed synthetic 150-bucket serialization plus buffered flush | About 0.244 ms and 152,304 allocated bytes. The worker is not allocation-free. Filesystem timing is not a worst-case bound. |
 | Same synthetic batch CSV + summary | About 20 KB per batch, roughly 4.9 MB/hour at 240 batches/hour. Manifests/horde snapshots are extra; final workload values change row sizes. |
-| Warmed HUD text formatting, 100 refreshes | 3,184 allocated bytes/refresh; mean 2.488 us/refresh on host .NET. Excludes Unity content/style/draw, game adapters and engine effects. HUD mode is not allocation-free. |
+| Warmed HUD text formatting, 100 refreshes | 3,768 allocated bytes/refresh; mean 3.009 us/refresh on host .NET. Excludes Unity content/style/layout/draw, game adapters and engine effects. HUD mode is not allocation-free. |
+| Production handoff, 1,000 attempts | Median/p95/p99/max 1.2/1.8/3.6/42.7 us; 999 accepted and one immediate rejection. Forced contention rejected in 0.3 us. Includes producer scheduling noise, excludes Unity dispatch; the observed maximum exceeded the issue's assumed 20 us allowance, while p95 did not. |
+| Collector/writer host allocation envelope | 978,344 bytes: 559,960 producer construction/full-buffer bytes plus 418,384 first real writer-batch bytes. Includes four 16,384-character metadata snapshots, manifest, 64 marker notes, concurrent metadata builder, streams, encoding and first-batch formatting. Excludes Unity adapters/UI assets and runtime-specific dispatch. This conservative allocation fixture is below 1 MiB; it is not whole-process RAM. |
+| Production event entry, thread guard and collector | Mean 0.008 us/call over 10,000 warmed calls, zero allocated bytes. Excludes Harmony dispatch, native registration and Unity Mono. |
+| Extreme numeric-width/Unicode batch | 306,535 CSV bytes and 62,059 log bytes. The fixture checks below 1 MiB CSV and 256 KiB log per batch; this is a retention stress case, not an expected hourly rate. |
 
 The [captured host output](diagnostics-host-checks-2026-09-22.txt) records that run;
 the check program prints fresh values. These observations do **not** establish
 the issue's 20 us Unity bucket target, 0.5% frame-time budget, a safe entity limit
 or absence of 1 ms hitches. No old-profiler Unity baseline or matched A/B runs
 were captured. Full incremental Harmony dispatch, skipped-hook cost, UI refresh
-and draw, engine timing capture, slow metrics, handoff contention and whole-process
+and draw, engine timing capture, slow metrics and whole-process
 GC/GPU effects still require several matched game runs. Source/native-contract
 checks do not execute detours, prove exception/pooling semantics under other mods,
 or measure Mono allocations. Metadata/stream/UI working memory also needs a
 target-runtime measurement against the full 1 MiB buffer goal.
 
-Remaining coverage gaps: verified native/Workshop-mod registry and loader-error
-coverage; classification of uncatalogued bosses and removal reasons. These are
+Remaining coverage gaps: authoritative native/Workshop loaded-content registry;
+classification of uncatalogued bosses and removal reasons. These are
 not silently inferred. Review [TESTING.md](TESTING.md) before release.
 
 API references: [Unity 2022.3 frame timing](https://docs.unity3d.com/2022.3/Documentation/Manual/frame-timing-manager.html),

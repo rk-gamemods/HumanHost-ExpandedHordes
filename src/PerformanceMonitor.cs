@@ -28,6 +28,7 @@ namespace ExpandedHordes
         private static Rect bounds;
         private static KeyCode hudKey, markerKey, rescanKey, folderKey;
         private static float hudScale;
+        private static bool hudLayoutDirty;
         internal static bool Active => active;
         internal static long WrongThreadEvents;
         internal static bool OnMain
@@ -79,7 +80,7 @@ namespace ExpandedHordes
             hudScale = ModSettings.HudScale.Value;
             bounds = new Rect(ModSettings.HudX.Value, ModSettings.HudY.Value, 920 * hudScale, 260 * hudScale);
             GameTelemetry.Initialize();
-            if (persist) writer = new TelemetryWriter(new TelemetryFileSink(reportDirectory, session, CaptureInventory()));
+            if (persist) writer = new TelemetryWriter(new TelemetryFileSink(reportDirectory, session, CaptureInventory(), ModSettings.ReportFileMiB.Value * 1024L * 1024));
             collector = new TelemetryCollector(0, writer?.Initial ?? new TelemetryBatch());
             sampler = new DetailSampler(); hudData = new TelemetryHud(); active = true;
             timing = ModSettings.Profiling.Value;
@@ -137,7 +138,7 @@ namespace ExpandedHordes
                     catch { Plugin.Log.LogWarning("Could not open diagnostics folder; reports may not have been written yet."); }
                 }
                 if ((persist && now >= nextInventory) || (persist && Input.GetKeyDown(rescanKey)))
-                { nextInventory = double.PositiveInfinity; collector.Batch.Metadata = CaptureInventory(); }
+                { nextInventory = double.PositiveInfinity; collector.SetMetadata(CaptureInventory(), now); }
                 if (hud && now >= nextHud) { nextHud = now + 250; RefreshHud(now); }
                 if (writer != null && writer.Failed && !warnedWriter)
                 { warnedWriter = true; Plugin.Log.LogWarning("Diagnostics writer failed. Gameplay continues; unsaved batches are counted. Check report-folder permissions and free space."); }
@@ -172,7 +173,8 @@ namespace ExpandedHordes
         private static void Publish(double now, WindowEnd reason)
         {
             collector.CloseBucket(now, GameTelemetry.Sample());
-            if (collector.Batch.Count == 0) return;
+            // Explicit boundaries can carry final horde/marker/metadata records
+            // even when no time has elapsed since the previous publication.
             collector.Complete(now, reason); var b = collector.Batch;
             b.LifecycleAvailable = GameTelemetry.LifecycleAvailable;
             b.CorpseEventsAvailable = GameTelemetry.CorpseEventsAvailable;
@@ -181,23 +183,36 @@ namespace ExpandedHordes
             b.WrongThreadEvents = Interlocked.Read(ref WrongThreadEvents);
             b.WriterFailures = writer?.FailedBatches ?? 0;
             b.WriterLagMs = writer?.MaxLagMs ?? 0;
+            b.DebugMode = ModSettings.DebugMode.Value; b.ProfilingMode = ModSettings.Profiling.Value;
+            b.HudMode = hud; b.DetailedMode = detail; b.EngineTimingAvailable = timing;
             hudData.CaptureWindow(b);
             b.PublishedTicks = Stopwatch.GetTimestamp();
             if (writer != null) { writer.TryPublish(b, out var next); collector.Next(next, now); }
             else { b.Reset(now); collector.HasPendingHorde = false; }
+            lastHordeSummaryAttempt = collector.HordeSummarySequence;
         }
         private static void RefreshHud(double now)
         {
             hudData.Detailed = detail; hudData.LifecycleAvailable = GameTelemetry.LifecycleAvailable;
             hudData.CorpseEventsAvailable = GameTelemetry.CorpseEventsAvailable;
             hudData.PlacementAvailable = FeatureRuntime.Enabled(Feature.Diagnostics);
+            hudData.CategoryAvailable = GameTelemetry.LifecycleAvailable && FeatureRuntime.Enabled(Feature.Catalog);
+            hudData.DisabledFeatures = FeatureRuntime.DisabledSummary;
             if (content == null) content = new GUIContent();
             content.text = hudData.Format(collector, writer, marker, now, WrongThreadEvents);
+            hudLayoutDirty = true;
         }
         internal static void Draw()
         {
             if (!active || !hud || content == null || Event.current.type != EventType.Repaint) return;
             if (style == null) style = new GUIStyle(GUI.skin.box) { alignment = TextAnchor.UpperLeft, fontSize = Mathf.RoundToInt(14 * hudScale), richText = false, wordWrap = true };
+            if (hudLayoutDirty)
+            {
+                // Recalculate only when cached text changes. Wrapped unavailable
+                // values and disabled-feature names must not be clipped by a fixed height.
+                bounds.height = style.CalcHeight(content, bounds.width) + 8 * hudScale;
+                hudLayoutDirty = false;
+            }
             GUI.Box(bounds, content, style);
         }
         internal static void Boundary(WindowEnd reason)
@@ -208,6 +223,7 @@ namespace ExpandedHordes
                 double now = Now;
                 collector.CloseBucket(now, GameTelemetry.Sample());
                 if (reason == WindowEnd.SceneUnload) collector.EndHorde(now, reason);
+                else if (reason == WindowEnd.Pause) collector.SnapshotHorde(now, reason);
                 Publish(now, reason);
             }
             catch { Stop(); }
@@ -215,7 +231,7 @@ namespace ExpandedHordes
         internal static void Stop()
         {
             if (!active) return;
-            long droppedBeforeStop = collector.DroppedBuckets;
+            long droppedBeforeStop = collector.DroppedBatches;
             try
             {
                 double now = Now;
@@ -226,7 +242,7 @@ namespace ExpandedHordes
             finally
             {
                 active = detail = false;
-                if (collector.DroppedBuckets > droppedBeforeStop) Plugin.Log.LogWarning("Final diagnostics window could not be queued; unsaved buckets=" + (collector.DroppedBuckets - droppedBeforeStop));
+                if (collector.DroppedBatches > droppedBeforeStop) Plugin.Log.LogWarning("Final diagnostics window could not be queued; session dropped buckets=" + collector.DroppedBuckets + "; lost marker notes=" + collector.LostMarkerNotes + "; lost metadata snapshots=" + collector.LostMetadataSnapshots);
                 if (writer != null && !writer.Stop(250))
                 { writerQuarantined = true; Plugin.Log.LogWarning("Diagnostics shutdown incomplete; unwritten batches=" + writer.Unwritten); }
                 writer = null;

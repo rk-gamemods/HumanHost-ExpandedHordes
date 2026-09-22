@@ -6,42 +6,49 @@ delivery boundary is completion short of actual play-testing. That boundary
 permits deferring Unity observations; it does not permit deferring code,
 automated checks, report contracts, or resource bounds that can be verified here.
 
-Status on 2026-09-22: **not yet complete before play-testing**. The initial draft
-commit was `530a827`. Follow-up checks below exposed defects that its 334 passing
-assertions did not cover. Read this table alongside [DIAGNOSTICS.md](DIAGNOSTICS.md)
-and [TESTING.md](TESTING.md). A passing assertion count does not certify the table.
+Status on 2026-09-22: **complete at the requested pre-play-test boundary**.
+The final host suite passes 471 assertions and the plugin builds with zero
+warnings/errors. This does not certify runtime safety, performance or compatibility.
+The initial draft commit was `530a827`; follow-up checks exposed defects that its
+334 assertions did not cover. Read this table alongside [DIAGNOSTICS.md](DIAGNOSTICS.md)
+and [TESTING.md](TESTING.md). The evidence, rather than the assertion count, defines
+what has been verified.
 
 IDs follow the order of the checkboxes in issue section 9. `Host proof` means
-the stated non-Unity boundary has automated evidence. `Open` includes missing
-or indirect evidence. `Play-test` is deliberately deferred, not passed.
+the stated non-Unity boundary has automated evidence. Source and installed-assembly
+checks complement it where a native runtime is required. `Play-test` is deliberately
+deferred, not passed. `HostModeChecks` executes the production host/collector/writer
+with test doubles only for Unity, game, configuration and Harmony installation.
+It proves orchestration and isolation, not the behavior or cost of those doubles
+in the actual game.
 
 | ID | Requirement | Current evidence and remaining work |
 | --- | --- | --- |
-| C1 | Shared collector and metric contracts | Host structure: `PerformanceMonitor` supplies `TelemetryCollector` to HUD and writer; DIAGNOSTICS defines sources and scopes. Open: reconcile every unavailable/disabled field across the three output views. |
+| C1 | Shared collector and metric contracts | One production collector supplies HUD and writer. DIAGNOSTICS defines sources, scopes, resets and unavailable values. HUD/report readback verifies empty distributions, effective state, categories, context failures, mode and availability flags. |
 | C2 | Registration, restoration, death, other removal, reuse, duplicates | Host proof: `TestAccessorsAndTransitions` exercises the production membership-transition policy against a real dictionary, including failed attempts and pooled identity reuse. Native metadata checks and documented source seams establish the adapter targets. Play-test: actual Harmony/native exception and pooling behavior. |
-| C3 | Fake-clock boundaries, stalls, pause/load/quit, resets | Host proof: 327 ms and multi-second stalls, partial stop and reset cases. Open: explicit pause/resume/load host sequences and same-timestamp publications; source-level callback order alone is insufficient. |
-| C4 | Event/window/horde reconciliation | Host proof: distinct totals, dropped-batch lifetime preservation and explicit discrepancies. Open: audit horde loss attribution and every partial-boundary total. |
-| C5 | Histogram distribution, bounds, overflow, merge and weights | Host proof: bin boundaries, overflow, long frames, merge/reset and horde frame totals. Open: expand known-distribution, empty/invalid input and weighted-FPS cases beyond the current small fixtures. |
-| C6 | Independent optional accessors/timing failures | Host proof: production compiled dictionary accessor rejects missing/wrong types, distinguishes null from empty, and follows replacement collections. Inventory exceptions are contained separately. Open: integration proof for independent hook/accessor/optional timing failures. |
-| C7 | Sampling fractions/cap/fairness/aliasing/nesting/exceptions/disabled | Host proof: rotating phases and per-section quotas; timing-token tests cover nested inclusive durations, exception-path completion, inactive samples and cross-window ownership. Open: complete-mode/Harmony dispatch checks and measured fractions in output. |
-| C8 | Installed-member contracts and Unity-free checks | Host proof: the checks run with or without a Managed-directory argument; actual assembly metadata checks cover game seams. Open: audit the inventory against every new required member rather than assuming the existing list is exhaustive. |
-| R1 | Zero-allocation hot path and separate handoff cost | Host proof: warmed numeric event/frame/bucket/reset loop, typed count reads, and timing-token capture/completion allocate zero bytes on .NET. Open: adapter/hook work audit and separately measured handoff contention. Play-test: Unity Mono allocation and dispatch costs. |
-| R2 | Disabled, HUD-only, debug-only component isolation | Source evidence: initial disabled return and conditional writer/timing installation. Open: automated mode-level negative checks; source inspection alone is too weak. |
+| C3 | Fake-clock boundaries, stalls, pause/load/quit, resets | `BoundaryChecks` covers pause/resume, reload of the same horde ID, zero-duration shutdown with events, empty repeated boundaries and spanning frames. Existing fixtures cover 327 ms and multi-second stalls. Production host boundary output is also checked. |
+| C4 | Event/window/horde reconciliation | Host proof: distinct totals, dropped-batch preservation, explicit discrepancies, partial-boundary sums and loss attributed to each observation's overlapping buckets. Pending final summaries acquire loss incurred after their snapshot. |
+| C5 | Histogram distribution, bounds, overflow, merge and weights | Host proof: empty/invalid input, bin bounds, known distributions, overflow, long frames, merge/reset, unequal window sizes and horde frame totals. Combined FPS uses total frames/total time. |
+| C6 | Independent optional accessors/timing failures | Compiled accessor tests cover missing/wrong types, null/empty/replaced collections and zero allocations. Production host tests inject inventory, engine-timing and hook-installation failures; independent components continue. Source resolves each game field separately without scans. Native execution remains play-test. |
+| C7 | Sampling fractions/cap/fairness/aliasing/nesting/exceptions/disabled | Host proof: exact uncapped 1/32 fraction, rotating phases, 98-total cap and section fairness, nested/finalizer bookkeeping, cross-window ownership, disabled production entry path and report counts. Actual Harmony dispatch/finalizer execution remains play-test. |
+| C8 | Installed-member contracts and Unity-free checks | Pure mode runs without game files. Installed checks cover patch signatures, singleton/static and compiled-field types, save fields, terrain getter, BepInEx inventory properties and corpse mutation IL seams. The plugin build verifies directly referenced game/Unity APIs. |
+| R1 | Zero-allocation hot path and separate handoff cost | Warmed numeric/event/frame/bucket/reset, typed reads, timing tokens and production event entry/thread guard allocate zero bytes on host .NET. Handoff and forced contention are measured separately. Game hooks use numeric state and existing dictionaries; Unity Mono and detour costs remain play-test. |
+| R2 | Disabled, HUD-only, debug-only component isolation | Production host tests cover all-off, HUD-only, debug-only, light profiling and combined detailed modes. They assert forbidden writer/inventory/timing/hook/draw work and zero warmed disabled-path allocations. Actual installed detours remain play-test. |
 | R3 | Bucket timing distribution and 20 us target | Host measurements report median/p95/p99/max for pure bucket closure. Play-test: target-runtime complete bucket maintenance. Host measurements exclude adapters, reset and handoff and cannot certify that target. |
-| R4 | Full incremental costs against allowances | Open: host-testable dispatch/handoff/formatting costs and baseline comparison. Play-test: full Unity event hooks, frame path, HUD, engine timing and slow metrics. |
+| R4 | Full incremental costs against allowances | Host event entry/thread guard, bucket closure, handoff/contention, HUD text and worker formatting are measured with domains labeled. Full hook/frame/UI/engine/slow-metric costs, old-profiler baseline and allowance/model comparison require matched game runs and remain play-test. |
 | R5 | Reused HUD assets, refresh allocations, draw cost | Host proof: production HUD formatter tests distinguish missing values from known zeros, retain cached timing/memory across batch reset, and label window duration/age. Text formatting bytes/refresh are measured. Source: cached content/style and 4 Hz refresh. Play-test: Unity draw allocations and rendering cost. |
-| R6 | Warmed workload, bursts, duration and fixed memory | Host proof: 1,000/10,000 callbacks per simulated second, bursts, configured population inputs, 2,000 simulated seconds, fixed arrays, saturated queue. Open: full collector/writer retained-memory bound across repeated metadata and session operations. |
-| R7 | Bounded writer, stalls/failures/loss, allocation and contention | Host proof: blocked and throwing sinks, a real unusable filesystem path, fixed pool, drop-newest, ownership, bounded/repeated shutdown, worker formatting allocation measurement. Open: contended handoff measurement and full failure-lifecycle audit. |
-| R8 | 15-second batches, partial shutdown, parseable rotation | Host proof: actual formatter/readback, invariant CSV under fr-FR, headers and partial-stop reason. Open: same-timestamp shutdown, multi-session pairing, configurable retention and marker/metadata loss disclosure. |
-| R9 | Complete working-buffer and final output bounds | Measured numeric buffers and representative output only. Open: bounded metadata construction and full writer/encoding/queue accounting, extreme row-size and retained-file bounds. The 1 MiB target is not yet proven. |
-| H1 | Complete readable HUD and safe controls | Host proof: `TestHud` checks initial unavailable fields, known zeros, hook availability, cached delayed timings, memory and window ages, and marker identity. Source provides configurable keys and wrapped cached text. Open: full requested-field audit. Play-test: legibility, hotkey conflicts, display placement and normal controls. |
-| H2 | Manifest, CSV, horde/window summaries and markers | Host proof: files and basic schema. Open: parse/readback marker timeline, environment association and full horde summary fields/mode information. |
-| H3 | Post-load/rescan inventory, coverage, overlaps and errors | Source: initial/delayed/explicit inventory and unresolved owner labels. Open: relevant loader dependency errors, exact owner filtering, bounded construction and isolated-inventory tests. Native registry support needs investigation before declaring coverage unavailable. |
-| H4 | Shareable privacy and no upload | Source: allowlisted metadata and local file sink. Open: automated adversarial metadata/error sanitation tests and complete output/path audit. User-supplied marker notes remain explicitly reviewable content. |
+| R6 | Warmed workload, bursts, duration and fixed memory | Host proof: 1,000/10,000 callbacks/s, bursts, configured population inputs, 2,000 simulated seconds, saturated fixed queue, full metadata slots, repeated session/rotation operations and bounded builders. No history-sized entity collection exists. |
+| R7 | Bounded writer, stalls/failures/loss, allocation and contention | Host proof: blocked/throwing sinks, real unusable path, fixed ownership, drop-newest, bounded/repeated stop, real formatter allocation and production-gate contention. Failed writes retain unsaved accounting; final loss is warned when possible. Native filesystem/Unity interaction remains play-test. |
+| R8 | 15-second batches, partial shutdown, parseable rotation | Host proof: actual formatter/readback, fr-FR CSV, same-timestamp events, multi-session pairing, configurable rotation and cumulative marker/metadata losses. Empty boundaries retain reasons without invented frames. Crash-loss limitations are documented. |
+| R9 | Complete working-buffer and final output bounds | Host allocation fixture is 978,344 bytes, including full metadata slots, manifest, builder, streams/encoding and first real formatting. Final representative output is 20,487 bytes/batch; extreme-width output is tested separately. Six retained files are verified. This proves the documented host fixture, not target-runtime heap usage. |
+| H1 | Complete readable HUD and safe controls | HUD covers requested state/counts, remaining budget, failures/categories, distributions, delayed timings, memory, loss and disabled features. Host tests verify formatting, configurable input path, cached content/style/layout reuse and measured-height sizing. Actual legibility, placement and key conflicts remain play-test. |
+| H2 | Manifest, CSV, horde/window summaries and markers | `ReportChecks`, retention and production host tests read actual files: manifest/session pairing, marker actions/times, inventory batch/time, effective horde state, shortfall duration, failures, categories, distributions, detail completion and mode/availability flags. |
+| H3 | Post-load/rescan inventory, coverage, overlaps and errors | Source uses initial, five-second and explicit captures, installed original targets, exact own-owner filtering and unresolved mappings. BepInEx dependency errors are sanitized. Bounded builders and capture-failure isolation are tested. Inspected native installation/subscription surfaces cannot establish loaded content; DIAGNOSTICS names that evidence and coverage gap. Actual post-load overlaps remain play-test. |
+| H4 | Shareable privacy and no upload | Adversarial fixtures cover paths, email/account-like IDs, local user/machine strings, controls, bidi text, oversized values and exception-message exclusion. Output audit found only the allowlist, numeric state and explicit user marker notes. No network client/upload was added. Notes still require user review. |
 | H5 | Repeated matched A/B scenarios | Play-test. TESTING lists scenarios; no actual A/B evidence exists. |
-| H6 | Whole-process/GPU/frame/allocation/spike/coverage report | Play-test for actual game measurements. Open: ensure output and test instructions preserve the evidence needed to analyze those runs. |
+| H6 | Whole-process/GPU/frame/allocation/spike/coverage report | Play-test for actual game measurements. Output preserves interval/frame sums, thresholds, distributions, coverage/loss, delayed timing counts, heap/GC and modes. TESTING requires external whole-process/GPU evidence, matched populations and raw measurements with variation. |
 | H7 | Evaluate 0.5% mean frame increase and repeatable 1 ms hitches | Play-test. No target pass or safe entity ceiling is claimed. |
-| H8 | Actual measurements, unsupported counters, gaps | DIAGNOSTICS separates host results from Unity claims. Open until this audit's non-play-test gaps are resolved and the final evidence/report references are refreshed. |
+| H8 | Actual measurements, unsupported counters, gaps | DIAGNOSTICS records final host measurements and raw output, allocation domains, source/build identity, unsupported counters and deferred game measurements. No safe entity ceiling, compatibility certification or 0.5% target pass is claimed. |
 
 ## Confirmed follow-up repairs
 
@@ -65,6 +72,15 @@ or indirect evidence. `Play-test` is deliberately deferred, not passed.
 - HUD startup no longer displays an unobserved population or empty distribution
   as zero. Its pure formatter labels unavailable hooks and completed-window
   age, and preserves delayed timing/memory values across buffer changes.
+- Same-timestamp shutdown now preserves recorded events and pending summaries.
+  Loss accounting distinguishes observation epochs across horde changes/reloads
+  and discloses discarded marker notes and overwritten/dropped inventories.
+- Metadata is bounded during construction, values are sanitized, loader errors
+  are included, and exact Harmony ownership replaces prefix matching. Optional
+  inventory failures cannot roll back installed gameplay patches.
+- Retention is configurable and tested across sessions and repeated rotations.
+  Host mode tests verify isolation, optional failures, cached HUD layout and
+  production boundary output. Empty distributions/rates are unavailable.
 
 The automated lifecycle fixtures prove membership-decision behavior, not that
 Unity executes every hook on the expected thread. Likewise, the timing-token

@@ -101,7 +101,10 @@ namespace ExpandedHordes
         private readonly StringBuilder row = new StringBuilder(1024);
         private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
         internal TelemetryFileSink(string directory, string session, string manifest, long limit = 5 * 1024 * 1024)
-        { this.directory = directory; this.session = session; this.manifest = manifest; this.limit = limit; }
+        {
+            if (limit <= 0) throw new ArgumentOutOfRangeException(nameof(limit));
+            this.directory = directory; this.session = session; this.manifest = manifest; this.limit = limit;
+        }
         private StreamWriter Open(string name, bool header)
         {
             string path = Path.Combine(directory, name);
@@ -121,6 +124,7 @@ namespace ExpandedHordes
             if (!header) writer.WriteLine("session=" + session + " rotation; retained history bounded to current/previous files");
         }
         internal static string Number(double value) => double.IsInfinity(value) ? "out_of_range" : double.IsNaN(value) ? "unavailable" : value.ToString("0.###", Inv);
+        private static string FrameNumber(FrameWindow frames, double value) => frames.Count == 0 ? "unavailable" : Number(value);
         private void Field(long value) { row.Append(','); row.Append(value.ToString(Inv)); }
         private void Field(double value) { row.Append(','); row.Append(Number(value)); }
         public void Write(TelemetryBatch b)
@@ -144,14 +148,21 @@ namespace ExpandedHordes
                 File.WriteAllText(path, "session=" + session + Environment.NewLine + manifest);
                 csv = Open("performance.csv", true); log = Open("diagnostics.log", false);
                 log.WriteLine("session=" + session + " schema=1; -1 means unavailable; population is sampled; timings are delayed; no causal attribution");
+                log.WriteLine("retention_limit_bytes=" + limit + " retained_files_per_stream=2; older_history_discarded_on_rotation; threshold_may_be_exceeded_by_one_batch");
             }
-            if (b.Metadata != null) { log.WriteLine(b.Metadata); b.Metadata = null; }
+            if (b.Metadata != null)
+            {
+                log.WriteLine("environment_snapshot batch=" + b.Sequence + " time_ms=" + Number(b.MetadataTimeMs));
+                log.WriteLine(b.Metadata); b.Metadata = null;
+            }
+            log.WriteLine("batch=" + b.Sequence + " modes debug/profiling/hud/detailed=" + b.DebugMode + "/" + b.ProfilingMode + "/" + b.HudMode + "/" + b.DetailedMode +
+                " engine_timing_enabled=" + b.EngineTimingAvailable + " lifecycle/placement/corpse/category_available=" + b.LifecycleAvailable + "/" + b.PlacementAvailable + "/" + b.CorpseEventsAvailable + "/" + b.CategoryAvailable);
             for (int i = 0; i < b.MarkerCount; i++)
             {
                 var marker = b.Markers[i];
                 log.WriteLine("test_marker id=" + marker.Id + " action=" + ((marker.Id & 1) == 1 ? "start" : "stop") + " time_ms=" + Number(marker.TimeMs) + " note=" + marker.Note);
             }
-            if (b.LostMarkerNotes > 0) log.WriteLine("lost_marker_notes=" + b.LostMarkerNotes);
+            log.WriteLine("lost_marker_notes_session=" + b.LostMarkerNotes + " lost_metadata_snapshots_session=" + b.LostMetadataSnapshots);
             for (int i = 0; i < b.Count; i++)
             {
                 var v = b.Buckets[i];
@@ -169,8 +180,8 @@ namespace ExpandedHordes
             }
             row.Clear(); row.Append("window=").Append(b.Sequence).Append(" reason=").Append(b.Reason)
                 .Append(" start_ms=").Append(Number(b.StartMs)).Append(" duration_ms=").Append(Number(b.EndMs - b.StartMs))
-                .Append(" frames=").Append(b.Frames.Count).Append(" mean/p95/p99/max_ms=").Append(Number(b.Frames.Mean))
-                .Append('/').Append(Number(b.Frames.Percentile95())).Append('/').Append(Number(b.Frames.Percentile(.99))).Append('/').Append(Number(b.Frames.Maximum))
+                .Append(" frames=").Append(b.Frames.Count).Append(" mean/p95/p99/max_ms=").Append(FrameNumber(b.Frames, b.Frames.Mean))
+                .Append('/').Append(FrameNumber(b.Frames, b.Frames.Percentile95())).Append('/').Append(FrameNumber(b.Frames, b.Frames.Percentile(.99))).Append('/').Append(FrameNumber(b.Frames, b.Frames.Maximum))
                 .Append(" cpu/gpu_delayed_ms=").Append(b.CpuSamples == 0 ? "unavailable" : Number(b.CpuTotal / b.CpuSamples))
                 .Append('/').Append(b.GpuSamples == 0 ? "unavailable" : Number(b.GpuTotal / b.GpuSamples))
                 .Append(" cpu/gpu_samples=").Append(b.CpuSamples).Append('/').Append(b.GpuSamples)
@@ -189,10 +200,10 @@ namespace ExpandedHordes
                 if (v.State.Alive >= 0) { aliveMin = Math.Min(aliveMin, v.State.Alive); aliveMax = Math.Max(aliveMax, v.State.Alive); }
                 if (v.State.Corpses >= 0) { corpseMin = Math.Min(corpseMin, v.State.Corpses); corpseMax = Math.Max(corpseMax, v.State.Corpses); }
             }
-            log.WriteLine(string.Format(Inv, "window_events fresh={0} restored={1} deaths={2} other_removed={3} placement_failed/calls={4}/{5} sampled_alive_min/max={6}/{7} sampled_corpse_min/max={8}/{9} missed_boundaries={10} achieved_hz={11:0.###}",
+            log.WriteLine(string.Format(Inv, "window_events fresh={0} restored={1} deaths={2} other_removed={3} placement_failed/calls={4}/{5} sampled_alive_min/max={6}/{7} sampled_corpse_min/max={8}/{9} missed_boundaries={10} achieved_hz={11}",
                 b.LifecycleAvailable ? fresh : -1, b.LifecycleAvailable ? restored : -1, b.LifecycleAvailable ? deaths : -1, b.LifecycleAvailable ? other : -1,
                 b.PlacementAvailable ? rejected : -1, b.PlacementAvailable ? placements : -1, aliveMin == int.MaxValue ? -1 : aliveMin, aliveMax,
-                corpseMin == int.MaxValue ? -1 : corpseMin, corpseMax, missed, b.EndMs > b.StartMs ? b.Count * 1000d / (b.EndMs - b.StartMs) : 0));
+                corpseMin == int.MaxValue ? -1 : corpseMin, corpseMax, missed, b.EndMs > b.StartMs ? Number(b.Count * 1000d / (b.EndMs - b.StartMs)) : "unavailable"));
             row.Clear(); row.Append("session_totals");
             for (int i = 0; i < b.TotalSnapshot.Length; i++)
                 row.Append(' ').Append((TelemetryEvent)i).Append('=').Append((i == 4 || i == 5 ? b.CorpseEventsAvailable : i >= 10 ? b.CategoryAvailable : i >= 6 ? b.PlacementAvailable : b.LifecycleAvailable) ? b.TotalSnapshot[i] : -1);
@@ -208,11 +219,14 @@ namespace ExpandedHordes
                 log.WriteLine(string.Format(Inv, "horde_observation_cumulative id={0} reason={1} duration_ms={2:0.###} fresh={3} restored={4} deaths={5} other_removed={6} peak_alive={7} peak_pool={8} frame_count={9} mean_ms={10} p95_approx_ms={11} p99_approx_ms={12} max_ms={13} lost_buckets={14} peak_managed_bytes={15} worst_completed_window_fps={16}",
                     h.Id, h.Reason, h.EndMs - h.StartMs, b.LifecycleAvailable ? h.Events[0] : -1, b.LifecycleAvailable ? h.Events[1] : -1,
                     b.LifecycleAvailable ? h.Events[2] : -1, b.LifecycleAvailable ? h.Events[3] : -1, h.PeakAlive, h.PeakCorpses,
-                    h.Frames.Count, Number(h.Frames.Mean), Number(h.Frames.Percentile95()), Number(h.Frames.Percentile(.99)), Number(h.Frames.Maximum), h.LostBuckets,
+                    h.Frames.Count, FrameNumber(h.Frames, h.Frames.Mean), FrameNumber(h.Frames, h.Frames.Percentile95()), FrameNumber(h.Frames, h.Frames.Percentile(.99)), FrameNumber(h.Frames, h.Frames.Maximum), h.LostBuckets,
                     h.PeakManaged, double.IsInfinity(h.WorstWindowFps) ? "unavailable" : Number(h.WorstWindowFps)));
                 log.WriteLine("horde_start_ms=" + Number(h.StartMs) + " budget/emitted=" + h.Last.Budget + "/" + h.Last.Emitted + " living_target=" + h.Last.LivingTarget + " corpse_limit=" + h.Last.CorpseLimit +
+                    " remaining=" + h.Last.Remaining + " game_minutes=" + Number(h.Last.GameMinutes) + " spawn_region=" + h.Last.Region +
+                    " sampled_below_target_ms_horde=" + Number(h.SampledBelowTargetMs) +
                     " known_fresh_large/boss=" + (b.CategoryAvailable ? h.Events[10] : -1) + "/" + (b.CategoryAvailable ? h.Events[11] : -1) +
                     " placement_failed/calls=" + (b.PlacementAvailable ? h.Events[7] : -1) + "/" + (b.PlacementAvailable ? h.Events[6] : -1) +
+                    " context_failed/calls=" + (b.PlacementAvailable ? h.Events[9] : -1) + "/" + (b.PlacementAvailable ? h.Events[8] : -1) +
                     " corpse_pool_adds/removes=" + (b.CorpseEventsAvailable ? h.Events[4] : -1) + "/" + (b.CorpseEventsAvailable ? h.Events[5] : -1));
             }
             log.WriteLine("lost_horde_summaries=" + b.LostHordeSummaries);

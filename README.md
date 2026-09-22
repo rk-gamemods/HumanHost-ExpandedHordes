@@ -115,6 +115,7 @@ guarantee that bodies form solid, climbable piles. Removed corpses can lose loot
 | Performance Profiling | Off | On / Off |
 | Debug HUD | Off | On / Off; F8 toggle, configurable position/scale |
 | Detailed Method Timings | Off | Requires profiling; sampled, adds hook overhead |
+| Report File MiB | 5 | Per-stream rotation threshold, 1-64 MiB; keeps current and previous files |
 
 Shared AI Allowance controls how many loaded zombies can focus on targets when
 responding to sounds. Vanilla uses 60. Keep it at least as high as Living Horde
@@ -164,7 +165,8 @@ Detailed Method Timings is a separate advanced option, off by default. Light
 mode does not install the per-zombie timing hook. All diagnostics default off.
 
 Reports label missing values and delayed CPU/GPU samples. Each data/log file is
-bounded to a current and previous file of roughly 5 MiB each. Errors remain in
+bounded to a current and previous file per stream, with a configurable threshold
+of 5 MiB by default and up to one batch of overshoot. Errors remain in
 the BepInEx log. See [diagnostics semantics and validation](docs/DIAGNOSTICS.md)
 for measurement limits and remaining runtime checks. No in-game overhead target
 has been certified.

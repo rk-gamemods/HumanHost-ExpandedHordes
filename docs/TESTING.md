@@ -5,7 +5,7 @@ and use a disposable world. Record the game build, mod version and other mods.
 
 - Confirm the game loads the plugin and its log names Expanded Hordes 0.2.0.
   Check for errors or disabled-feature messages. Confirm HHMM shows the friendly
-  name and 26 settings. Enable Debug Mode and restart to see catalog/event details.
+  name and 27 settings. Enable Debug Mode and restart to see catalog/event details.
 - Try base budget 10 and living target 3. At Horde Quantity 100%, expect a total
   budget of 10; at 200%, expect 20. Living target should stay 3. Confirm kills
   allow replacements and no new spawns arrive after the budget is exhausted.
