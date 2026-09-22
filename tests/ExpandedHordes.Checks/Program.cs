@@ -41,7 +41,7 @@ internal static class Program
         frames.Add(double.NaN); frames.Add(double.PositiveInfinity); frames.Add(0);
         Check(frames.Count == 0, "Invalid profiler samples excluded");
         for (int i = 0; i < 10000; i++) frames.Add(10);
-        Check(frames.Count == 10000 && frames.SampleCount == 8192 && frames.Mean == 10 && frames.Percentile95() == 10, "Profiler storage bounded without losing average count");
+        Check(frames.Count == 10000 && frames.SampleCount == 10000 && frames.Mean == 10 && frames.Percentile95() == 10, "Histogram covers every frame in fixed storage");
         Check(PerformanceRules.Hint(20, 0, 0, 25) == "unavailable", "Missing GPU data must not imply CPU bottleneck");
         Check(PerformanceRules.Hint(20, 5, 0, 25) == "CPU_heavier", "CPU-heavy indication");
         Check(PerformanceRules.Hint(5, 20, 0, 25) == "GPU_heavier", "GPU-heavy indication");
@@ -97,6 +97,8 @@ internal static class Program
         Check(HordeRules.Category(79, 11, 11, 11, 40, 40) == 1, "Maximum extra chances cover 80 slots");
         Check(HordeRules.Category(80, 11, 11, 11, 40, 40) == 0, "Maximum chances leave 20 native slots");
 
+        TelemetryChecks.Run(Check);
+        if (args.Length == 0) { Console.WriteLine($"PASS: {assertions} pure assertions. Native contracts skipped (no Managed directory supplied)."); return; }
         if (args.Length != 1) throw new ArgumentException("Pass the installed game's Managed directory for contract checks.");
         using (var dll = new AssemblyContract(Path.Combine(args[0], "Terrain.dll")))
         {
@@ -107,10 +109,16 @@ internal static class Program
             dll.Method("NPC_Horde_Mgr", "GetValidSpawnPosition", "startPos", "minSpawnDis", "spawnRadius", "maxAttempts");
             dll.Method("NPC_Horde_Mgr", "Try_Get_Spawn_Context", "bioInfo");
             dll.Method("NPC_Horde_Mgr", "Save_Horde_Data_To_Disk");
+            dll.Method("NPC_Horde_Mgr", "Add_AliveHordeNPC", "npcObj", "npcInfo");
+            dll.Method("NPC_Horde_Mgr", "Remove_AliveHordeNPC", "npcObj");
+            dll.Method("NPC_Horde_Mgr", "Restore_Horde_NPCs");
+            dll.Method("NPC_Spawner_Mgr", "Back_Dead_NPC_To_Pool", "inputNPC");
+            dll.Fields("NPC_Horde_Mgr", "_ins", "_aliveHordeNPCs", "_G_Info");
             dll.Fields("NPC_Horde_Mgr", "_hordeSaveData", "_HordeZombieAll", "_ZombiesPioneerCount", "_ZombiesPerWaveAdd", "_MaxAllowActiveZombies", "_corHordeSpawn");
             dll.Fields("NPC_Spawner_Mgr", "NPC_Biomes");
-            dll.Fields("Terrain_Loader_Manager", "BigTerraWidth");
+            dll.Fields("Terrain_Loader_Manager", "BigTerraWidth", "_ins", "_biomesWidthDis");
         }
+        using (var dll = new AssemblyContract(Path.Combine(args[0], "Global_Funcs.dll"))) dll.Fields("Global_Infos", "_totalGameMinutes");
         using (var dll = new AssemblyContract(Path.Combine(args[0], "AI.dll")))
         {
             dll.Method("Zombie_Agent", "_Update");
@@ -125,6 +133,10 @@ internal static class Program
             dll.Method("GPUI_Dead_Body_Mgr", "Spawn_GPUI_Dead_Body", "body_Disk", "bioIndex", "bodyPrefabIndex", "groupIndex", "hasHead", "bodyPos", "spineToHeadDirect", "charForward", "ragdollMgr", "bloodDecalIns", "onTerraOrOnBI", "belongKey");
             dll.FieldReads("GPUI_Dead_Body_Mgr", "Spawn_GPUI_Dead_Body", "_MaxCorpseCount", 1);
             dll.Fields("GPUI_Dead_Body_Mgr", "_ActiveDeadBodies");
+            dll.Fields("GPUI_Dead_Body_Mgr", "_ins");
+            dll.Method("GPUI_Dead_Body_Mgr", "Put_Back_Body_To_Pool", "bodyIns", "smashedBody", "fadeBloodDecal");
+            dll.CollectionMutation("GPUI_Dead_Body_Mgr", "Spawn_GPUI_Dead_Body", "_ActiveDeadBodies", "Add");
+            dll.CollectionMutation("GPUI_Dead_Body_Mgr", "Put_Back_Body_To_Pool", "_ActiveDeadBodies", "Remove");
             dll.Method("C_Controller_Base", "Play_Anim_BaseLayer", "clip", "clipTran", "transitionTime", "speed");
             dll.Fields("C_Controller_Base", "curr_Move_F", "Pressed_FastMove", "Pressed_Move", "currCharState");
             dll.Fields("NPC_Input", "_npcSpawnSource", "_inRunning");
@@ -195,5 +207,40 @@ internal static class Program
             Check(count == expected, $"Verified narrow IL seam: {type}.{methodName} reads {fieldName} {expected} time(s)");
         }
         public void Dispose() { pe.Dispose(); stream.Dispose(); }
+        internal void CollectionMutation(string type, string methodName, string fieldName, string operation)
+        {
+            var t = Type(type);
+            var field = t.GetFields().Select(reader.GetFieldDefinition).Single(f => reader.GetString(f.Name) == fieldName);
+            var fieldType = reader.GetBlobBytes(field.Signature).Skip(1).ToArray();
+            var method = t.GetMethods().Select(reader.GetMethodDefinition).Single(m => reader.GetString(m.Name) == methodName);
+            byte[] il = pe.GetMethodBody(method.RelativeVirtualAddress).GetILBytes();
+            var codes = typeof(OpCodes).GetFields().Where(f => f.FieldType == typeof(OpCode)).Select(f => (OpCode)f.GetValue(null)).ToDictionary(o => unchecked((ushort)o.Value));
+            int offset = 0, count = 0;
+            while (offset < il.Length)
+            {
+                ushort key = il[offset++]; if (key == 0xfe) key = (ushort)(0xfe00 | il[offset++]);
+                var code = codes[key];
+                if (code == OpCodes.Call || code == OpCodes.Callvirt)
+                {
+                    var handle = MetadataTokens.EntityHandle(BitConverter.ToInt32(il, offset));
+                    if (handle.Kind == HandleKind.MemberReference)
+                    {
+                        var m = reader.GetMemberReference((MemberReferenceHandle)handle);
+                        if (reader.GetString(m.Name) == operation && m.Parent.Kind == HandleKind.TypeSpecification &&
+                            reader.GetBlobBytes(reader.GetTypeSpecification((TypeSpecificationHandle)m.Parent).Signature).SequenceEqual(fieldType)) count++;
+                    }
+                }
+                offset += code.OperandType switch
+                {
+                    OperandType.InlineNone => 0,
+                    OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => 1,
+                    OperandType.InlineVar => 2,
+                    OperandType.InlineI8 or OperandType.InlineR => 8,
+                    OperandType.InlineSwitch => 4 + 4 * BitConverter.ToInt32(il, offset),
+                    _ => 4
+                };
+            }
+            Check(count == 1, $"Unique verified collection mutation: {type}.{methodName} {fieldName}.{operation}");
+        }
     }
 }

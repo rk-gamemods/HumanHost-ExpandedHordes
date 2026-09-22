@@ -32,7 +32,7 @@ namespace ExpandedHordes
         private static void Prefix(ref int biomeIndex, ref int groupIndex, ref int npcPrefabIndex, bool async)
         {
             if (!async || G_Save.isQuit || !FeatureRuntime.Enabled(Feature.Composition)) return;
-            long started = PerformanceMonitor.Begin();
+            long started = PerformanceMonitor.Begin(ProfileSection.Composition);
             try { SpecialRoster.Select(ref biomeIndex, ref groupIndex, ref npcPrefabIndex); }
             catch (Exception ex) { FeatureRuntime.Fail(Feature.Composition, ex); }
             finally { PerformanceMonitor.End(ProfileSection.Composition, started); }

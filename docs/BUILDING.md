@@ -37,3 +37,12 @@ The initial alpha build passed with zero warnings/errors and 245 policy and
 installed-assembly checks against Steam build 25448142. Those checks cover rules
 and expected patch targets, not actual Harmony detours, spawning, combat,
 rendering, HHMM UI or performance. Follow [TESTING.md](TESTING.md) for runtime checks.
+
+The issue #1 diagnostics work adds a pure mode that needs no game files:
+
+```powershell
+dotnet run --project tests/ExpandedHordes.Checks -c Release
+```
+
+It prints collector and writer microbenchmarks with explicit host-runtime limits.
+See [DIAGNOSTICS.md](DIAGNOSTICS.md) for the metric contract and validation gaps.

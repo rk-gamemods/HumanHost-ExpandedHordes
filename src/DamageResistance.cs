@@ -14,7 +14,7 @@ namespace ExpandedHordes
             if (!FeatureRuntime.Enabled(Feature.Resistance) || G_Save.isQuit
                 || !(value < __instance._CurrHP) || !(__instance._Controller is Zombie_Input zombie)
                 || zombie._npcSpawnSource != 2 || !zombie.gameObject.activeInHierarchy) return;
-            long started = PerformanceMonitor.Begin();
+            long started = PerformanceMonitor.Begin(ProfileSection.Resistance);
             try
             {
                 var manager = NPC_Horde_Mgr.ins;

@@ -15,7 +15,7 @@ namespace ExpandedHordes
             ClipTransition clipTran, ref float speed)
         {
             if (!FeatureRuntime.Enabled(Feature.Movement) || !(__instance is Zombie_Input zombie)) return;
-            long started = PerformanceMonitor.Begin();
+            long started = PerformanceMonitor.Begin(ProfileSection.RunSpeed);
             try
             {
                 NPC_Horde_Mgr horde = NPC_Horde_Mgr.ins;

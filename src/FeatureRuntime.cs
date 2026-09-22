@@ -6,7 +6,7 @@ using HarmonyLib;
 
 namespace ExpandedHordes
 {
-    internal enum Feature { Population, Catalog, Composition, Attraction, Movement, Resistance, Corpses, Diagnostics, Profiling }
+    internal enum Feature { Population, Catalog, Composition, Attraction, Movement, Resistance, Corpses, Diagnostics, Profiling, CorpseDiagnostics }
 
     // Patch ownership is per feature. A failed optional hook does not disable the horde.
     internal static class FeatureRuntime

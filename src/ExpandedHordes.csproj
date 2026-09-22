@@ -6,7 +6,11 @@
     <Version>0.2.0</Version>
   </PropertyGroup>
   <ItemGroup>
+    <HumanHostRef Include="UnityEngine.IMGUIModule" />
+    <HumanHostRef Include="UnityEngine.TextRenderingModule" />
+    <HumanHostRef Include="UnityEngine.InputLegacyModule" />
     <HumanHostRef Include="Terrain" />
+    <HumanHostRef Include="Global_Funcs" />
     <HumanHostRef Include="AI" />
     <HumanHostRef Include="Creature" />
     <HumanHostRef Include="Kybernetik.Animancer" />

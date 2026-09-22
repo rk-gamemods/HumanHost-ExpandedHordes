@@ -113,6 +113,8 @@ guarantee that bodies form solid, climbable piles. Removed corpses can lose loot
 | Retained Corpse Limit | 300 | 1-5,000 |
 | Debug Mode | Off | On / Off |
 | Performance Profiling | Off | On / Off |
+| Debug HUD | Off | On / Off; F8 toggle, configurable position/scale |
+| Detailed Method Timings | Off | Requires profiling; sampled, adds hook overhead |
 
 Shared AI Allowance controls how many loaded zombies can focus on targets when
 responding to sounds. Vanilla uses 60. Keep it at least as high as Living Horde
@@ -152,13 +154,20 @@ conflict. Direct forced-death effects can bypass resistance, and some damage
 displays may show the hit amount before reduction. Native survivor-health
 restoration and save/load limitations remain.
 
-Debug Mode adds event and placement details to `BepInEx/LogOutput.log`.
-Performance Profiling writes a summary every 15 seconds and `performance.csv`
-beside the DLL. It reports frame times, selected code timings and CPU/GPU timing
-when the game exposes it. Missing data is marked unavailable; a timing hint
-does not prove what caused a slowdown. Profiling adds overhead. Both options
-default off, and CSV storage is limited to a current and previous file of roughly
-5 MiB each. Errors remain logged when debug mode is off.
+Debug Mode and Performance Profiling enable nominal 100 ms telemetry buckets.
+One background writer flushes CSV and readable summaries every 15 seconds into
+`diagnostics/` beside the DLL. Debug HUD adds a cached overlay, refreshed at 4 Hz.
+F8 toggles visibility, F9 alternates start/stop test markers, F10 rescans settings/plugins,
+and F11 explicitly opens the local report folder. Test Marker Note adds an optional note.
+Keys, position and scale are configurable; check for collisions with other mods.
+Detailed Method Timings is a separate advanced option, off by default. Light
+mode does not install the per-zombie timing hook. All diagnostics default off.
+
+Reports label missing values and delayed CPU/GPU samples. Each data/log file is
+bounded to a current and previous file of roughly 5 MiB each. Errors remain in
+the BepInEx log. See [diagnostics semantics and validation](docs/DIAGNOSTICS.md)
+for measurement limits and remaining runtime checks. No in-game overhead target
+has been certified.
 
 Use the [testing checklist](docs/TESTING.md) when trying the alpha. For a bug report,
 include your game build, mod settings, other mods, what happened and steps to

@@ -1,0 +1,248 @@
+using System;
+
+namespace ExpandedHordes
+{
+    internal enum TelemetryEvent { Fresh, Restored, Death, OtherRemoval, CorpseAdded, CorpseRemoved, Placement, PlacementFailed, Context, ContextFailed, Large, Boss, Count }
+    internal enum WindowEnd { Cadence, HordeChange, SceneUnload, Shutdown, Pause, Resume, SpawningStopped }
+
+    internal sealed class HordeObservation
+    {
+        internal readonly long[] Events = new long[(int)TelemetryEvent.Count];
+        internal readonly FrameWindow Frames = new FrameWindow();
+        internal int Id = -1, PeakAlive, PeakCorpses;
+        internal double StartMs, EndMs, WorstWindowFps;
+        internal long PeakManaged, LostBuckets;
+        internal PopulationSample Last;
+        internal WindowEnd Reason;
+        internal void Reset(int id, double now)
+        {
+            Id = id; StartMs = EndMs = now; PeakAlive = PeakCorpses = -1;
+            WorstWindowFps = double.PositiveInfinity; PeakManaged = -1; LostBuckets = 0;
+            Last = PopulationSample.Unavailable; Array.Clear(Events, 0, Events.Length); Frames.Reset();
+        }
+        internal void CopyTo(HordeObservation target)
+        {
+            target.Reset(Id, StartMs); target.EndMs = EndMs; target.PeakAlive = PeakAlive; target.PeakCorpses = PeakCorpses;
+            target.WorstWindowFps = WorstWindowFps; target.PeakManaged = PeakManaged; target.LostBuckets = LostBuckets;
+            target.Last = Last; target.Reason = Reason; Array.Copy(Events, target.Events, Events.Length); target.Frames.Merge(Frames);
+        }
+    }
+
+    // All values are numeric and main-thread owned until the whole batch is published.
+    internal struct PopulationSample
+    {
+        internal int Alive, Corpses, Horde, Budget, Emitted, LivingTarget, CorpseLimit, Region;
+        internal bool Spawning, SpawningKnown;
+        internal double GameMinutes;
+        internal static PopulationSample Unavailable => new PopulationSample
+        { Alive = -1, Corpses = -1, Horde = -1, Budget = -1, Emitted = -1, LivingTarget = -1, CorpseLimit = -1, Region = -1, GameMinutes = -1 };
+    }
+
+    internal struct TelemetryBucket
+    {
+        internal long Sequence, Frames, Slow17, Slow33, Slow50, Missed;
+        internal double StartMs, EndMs, FrameTotalMs, FrameMaxMs;
+        internal long Fresh, Restored, Deaths, OtherRemoved, CorpseAdded, CorpseRemoved;
+        internal long Placement, PlacementFailed, Context, ContextFailed, Large, Boss;
+        internal int AliveMin, AliveMax, CorpseMin, CorpseMax, Marker;
+        internal PopulationSample State;
+        internal double Duration => EndMs - StartMs;
+    }
+    internal struct TestMarker
+    {
+        internal int Id;
+        internal double TimeMs;
+        internal string Note;
+    }
+
+    internal sealed class TelemetryBatch
+    {
+        internal const int Capacity = 150;
+        internal readonly TelemetryBucket[] Buckets = new TelemetryBucket[Capacity];
+        internal readonly FrameWindow Frames = new FrameWindow();
+        internal readonly long[] Observed = new long[7], Timed = new long[7], Skipped = new long[7], Ticks = new long[7], MaxTicks = new long[7];
+        internal int Count;
+        internal long PublishedTicks;
+        internal bool LifecycleAvailable = false, CorpseEventsAvailable = false;
+        internal bool PlacementAvailable = false, CategoryAvailable = false;
+        internal long WrongThreadEvents = 0, WriterFailures = 0;
+        internal double WriterLagMs = 0;
+        internal string Metadata;
+        internal readonly long[] TotalSnapshot = new long[(int)TelemetryEvent.Count];
+        internal readonly HordeObservation Horde = new HordeObservation();
+        internal bool HasHorde;
+        internal long LostHordeSummaries;
+        internal readonly TestMarker[] Markers = new TestMarker[16];
+        internal int MarkerCount, LostMarkerNotes;
+        internal long ReconciliationDelta;
+        internal bool ReconciliationAvailable;
+        internal double SampledBelowTargetMs;
+        internal long Sequence, DroppedBatches, DroppedBuckets, ManagedBytes, Gc0, Gc1, Gc2;
+        internal long CpuSamples, GpuSamples;
+        internal double CpuTotal, GpuTotal, TimingReadMs;
+        internal ulong TimingSource;
+        internal WindowEnd Reason;
+        internal double StartMs, EndMs;
+        internal void Reset(double now)
+        {
+            Count = MarkerCount = LostMarkerNotes = 0; Array.Clear(Markers, 0, Markers.Length);
+            Metadata = null; HasHorde = false; Frames.Reset(); StartMs = EndMs = now;
+            ManagedBytes = -1; Gc0 = Gc1 = Gc2 = 0;
+            CpuSamples = GpuSamples = 0; CpuTotal = GpuTotal = 0; TimingReadMs = -1; TimingSource = 0;
+            Array.Clear(Observed, 0, 7); Array.Clear(Timed, 0, 7); Array.Clear(Skipped, 0, 7);
+            Array.Clear(Ticks, 0, 7); Array.Clear(MaxTicks, 0, 7);
+        }
+    }
+
+    // The host supplies monotonic milliseconds, making boundary policy testable without Unity.
+    internal sealed class TelemetryCollector
+    {
+        internal TelemetryBatch Batch;
+        internal TelemetryBucket Latest;
+        internal readonly long[] Totals = new long[(int)TelemetryEvent.Count];
+        internal readonly FrameWindow SessionFrames = new FrameWindow();
+        internal readonly HordeObservation Horde = new HordeObservation();
+        private readonly HordeObservation pendingHorde = new HordeObservation();
+        internal bool HasPendingHorde;
+        internal long HordeSummarySequence;
+        internal long LostHordeSummaries;
+        internal long DroppedBatches, DroppedBuckets;
+        internal int PeakAlive, PeakCorpses;
+        private bool baselineKnown;
+        private long aliveBaseline;
+        internal double SampledBelowTargetMs;
+        private TelemetryBucket bucket;
+        private long bucketSequence, batchSequence;
+        private double lastFrameMs;
+        internal TelemetryCollector(double now, TelemetryBatch batch)
+        {
+            Batch = batch; batch.Reset(now); lastFrameMs = now; NewBucket(now);
+        }
+        private void NewBucket(double now)
+        {
+            bucket = new TelemetryBucket { StartMs = now, AliveMin = -1, AliveMax = -1, CorpseMin = -1, CorpseMax = -1, State = PopulationSample.Unavailable };
+        }
+        internal void Record(TelemetryEvent kind)
+        {
+            Totals[(int)kind]++;
+            if (Horde.Id >= 0) Horde.Events[(int)kind]++;
+            switch (kind)
+            {
+                case TelemetryEvent.Fresh: bucket.Fresh++; break;
+                case TelemetryEvent.Restored: bucket.Restored++; break;
+                case TelemetryEvent.Death: bucket.Deaths++; break;
+                case TelemetryEvent.OtherRemoval: bucket.OtherRemoved++; break;
+                case TelemetryEvent.CorpseAdded: bucket.CorpseAdded++; break;
+                case TelemetryEvent.CorpseRemoved: bucket.CorpseRemoved++; break;
+                case TelemetryEvent.Placement: bucket.Placement++; break;
+                case TelemetryEvent.PlacementFailed: bucket.PlacementFailed++; break;
+                case TelemetryEvent.Context: bucket.Context++; break;
+                case TelemetryEvent.ContextFailed: bucket.ContextFailed++; break;
+                case TelemetryEvent.Large: bucket.Large++; break;
+                case TelemetryEvent.Boss: bucket.Boss++; break;
+            }
+        }
+        internal bool BucketDue(double now) => now - bucket.StartMs >= 100;
+        internal bool BatchDue(double now) => now - Batch.StartMs >= 15000 || Batch.Count == TelemetryBatch.Capacity;
+        internal void Mark(int marker, double now, string note)
+        {
+            bucket.Marker = marker;
+            if (Batch.MarkerCount == Batch.Markers.Length) { Batch.LostMarkerNotes++; return; }
+            Batch.Markers[Batch.MarkerCount++] = new TestMarker { Id = marker, TimeMs = now, Note = note };
+        }
+        internal void Frame(double now)
+        {
+            double ms = now - lastFrameMs;
+            if (ms <= 0 || double.IsInfinity(ms) || double.IsNaN(ms)) return;
+            lastFrameMs = now;
+            bucket.Frames++; bucket.FrameTotalMs += ms; bucket.FrameMaxMs = Math.Max(bucket.FrameMaxMs, ms);
+            if (ms > 16.7) bucket.Slow17++;
+            if (ms > 33.3) bucket.Slow33++;
+            if (ms > 50) bucket.Slow50++;
+            Batch.Frames.Add(ms); SessionFrames.Add(ms);
+            if (Horde.Id >= 0) Horde.Frames.Add(ms);
+        }
+        internal void ObserveHorde(int id, double now)
+        {
+            if (id == Horde.Id) return;
+            EndHorde(now, WindowEnd.HordeChange);
+            Horde.Reset(id, now);
+        }
+        internal void EndHorde(double now, WindowEnd reason)
+        {
+            if (Horde.Id < 0) return;
+            SnapshotHorde(now, reason);
+            Horde.Reset(-1, now);
+        }
+        internal void SnapshotHorde(double now, WindowEnd reason)
+        {
+            if (Horde.Id < 0) return;
+            if (HasPendingHorde) LostHordeSummaries++;
+            Horde.EndMs = now; Horde.Reason = reason; Horde.CopyTo(pendingHorde); HasPendingHorde = true; HordeSummarySequence++;
+        }
+        internal void CloseBucket(double now, PopulationSample state)
+        {
+            if (now <= bucket.StartMs || Batch.Count == TelemetryBatch.Capacity) return;
+            bucket.EndMs = now; bucket.Sequence = ++bucketSequence; bucket.State = state;
+            // One observation after a stall. The entire spanning frame belongs to this bucket.
+            bucket.Missed = Math.Max(0, (long)Math.Floor((now - bucket.StartMs) / 100) - 1);
+            bucket.AliveMin = bucket.AliveMax = state.Alive;
+            bucket.CorpseMin = bucket.CorpseMax = state.Corpses;
+            PeakAlive = Math.Max(PeakAlive, state.Alive); PeakCorpses = Math.Max(PeakCorpses, state.Corpses);
+            if (Horde.Id >= 0)
+            {
+                Horde.Last = state; Horde.PeakAlive = Math.Max(Horde.PeakAlive, state.Alive); Horde.PeakCorpses = Math.Max(Horde.PeakCorpses, state.Corpses);
+            }
+            if (!baselineKnown && state.Alive >= 0)
+            {
+                aliveBaseline = state.Alive - (Totals[0] + Totals[1] - Totals[2] - Totals[3]); baselineKnown = true;
+            }
+            if (state.Spawning && state.Budget > state.Emitted && state.Alive >= 0 && state.Alive < state.LivingTarget)
+                SampledBelowTargetMs += bucket.Duration;
+            Latest = bucket; Batch.Buckets[Batch.Count++] = bucket; NewBucket(now);
+        }
+        internal void Complete(double now, WindowEnd reason)
+        {
+            Batch.EndMs = now; Batch.Sequence = ++batchSequence; Batch.Reason = reason;
+            Batch.DroppedBatches = DroppedBatches; Batch.DroppedBuckets = DroppedBuckets;
+            Array.Copy(Totals, Batch.TotalSnapshot, Totals.Length);
+            Batch.ReconciliationAvailable = baselineKnown && Latest.State.Alive >= 0;
+            Batch.ReconciliationDelta = Latest.State.Alive - (aliveBaseline + Totals[0] + Totals[1] - Totals[2] - Totals[3]);
+            Batch.SampledBelowTargetMs = SampledBelowTargetMs;
+            if (Horde.Id >= 0 && Batch.Frames.Mean > 0 && now - Batch.StartMs >= 15000)
+            {
+                Horde.WorstWindowFps = Math.Min(Horde.WorstWindowFps, 1000 / Batch.Frames.Mean);
+                Horde.PeakManaged = Math.Max(Horde.PeakManaged, Batch.ManagedBytes);
+            }
+            if (HasPendingHorde) { pendingHorde.CopyTo(Batch.Horde); Batch.HasHorde = true; }
+            Batch.LostHordeSummaries = LostHordeSummaries;
+        }
+        internal void Next(TelemetryBatch next, double now)
+        {
+            if (ReferenceEquals(next, Batch))
+            {
+                DroppedBatches++; DroppedBuckets += Batch.Count;
+                if (Horde.Id >= 0) Horde.LostBuckets += Batch.Count;
+            }
+            else HasPendingHorde = false;
+            Batch = next; Batch.Reset(now);
+        }
+    }
+
+    // Per-section quotas prevent stable iteration order from starving later sections.
+    // Phase changes every interval without touching game RNG; 7 * 14 <= 100 timings.
+    internal sealed class DetailSampler
+    {
+        private readonly long[] calls = new long[7];
+        private readonly int[] used = new int[7];
+        private int phase;
+        internal void Rotate() { phase = (phase + 13) & 31; Array.Clear(used, 0, used.Length); Array.Clear(calls, 0, calls.Length); }
+        internal bool Select(int section, TelemetryBatch batch)
+        {
+            batch.Observed[section]++;
+            if (((calls[section]++ + phase + section * 7) & 31) != 0) return false;
+            if (used[section] >= 14) { batch.Skipped[section]++; return false; }
+            used[section]++; batch.Timed[section]++; return true;
+        }
+    }
+}

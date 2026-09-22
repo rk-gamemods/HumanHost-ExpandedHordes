@@ -7,5 +7,7 @@
     <Compile Include="../../src/HordeRules.cs" Link="HordeRules.cs" />
     <Compile Include="../../src/CombatRules.cs" Link="CombatRules.cs" />
     <Compile Include="../../src/PerformanceRules.cs" Link="PerformanceRules.cs" />
+    <Compile Include="../../src/TelemetryCollector.cs" Link="TelemetryCollector.cs" />
+    <Compile Include="../../src/TelemetryWriter.cs" Link="TelemetryWriter.cs" />
   </ItemGroup>
 </Project>
