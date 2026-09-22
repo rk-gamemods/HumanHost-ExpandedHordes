@@ -5,6 +5,8 @@ using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.Emit;
 using System.Reflection.PortableExecutable;
+using System.Reflection;
+using System.Collections.Immutable;
 using ExpandedHordes;
 
 internal static class Program
@@ -41,7 +43,7 @@ internal static class Program
         frames.Add(double.NaN); frames.Add(double.PositiveInfinity); frames.Add(0);
         Check(frames.Count == 0, "Invalid profiler samples excluded");
         for (int i = 0; i < 10000; i++) frames.Add(10);
-        Check(frames.Count == 10000 && frames.SampleCount == 8192 && frames.Mean == 10 && frames.Percentile95() == 10, "Profiler storage bounded without losing average count");
+        Check(frames.Count == 10000 && frames.SampleCount == 10000 && frames.Mean == 10 && frames.Percentile95() == 10, "Histogram covers every frame in fixed storage");
         Check(PerformanceRules.Hint(20, 0, 0, 25) == "unavailable", "Missing GPU data must not imply CPU bottleneck");
         Check(PerformanceRules.Hint(20, 5, 0, 25) == "CPU_heavier", "CPU-heavy indication");
         Check(PerformanceRules.Hint(5, 20, 0, 25) == "GPU_heavier", "GPU-heavy indication");
@@ -97,7 +99,20 @@ internal static class Program
         Check(HordeRules.Category(79, 11, 11, 11, 40, 40) == 1, "Maximum extra chances cover 80 slots");
         Check(HordeRules.Category(80, 11, 11, 11, 40, 40) == 0, "Maximum chances leave 20 native slots");
 
+        TelemetryChecks.Run(Check);
+        MetadataChecks.Run(Check);
+        RetentionChecks.Run(Check);
+        WriterResourceChecks.Run(Check);
+        HostModeChecks.Run(Check);
+        ReportChecks.Run(Check);
+        if (args.Length == 0) { Console.WriteLine($"PASS: {assertions} pure assertions. Native contracts skipped (no Managed directory supplied)."); return; }
         if (args.Length != 1) throw new ArgumentException("Pass the installed game's Managed directory for contract checks.");
+        string gameDirectory = Directory.GetParent(Path.GetFullPath(args[0])).Parent.FullName;
+        using (var dll = new AssemblyContract(Path.Combine(gameDirectory, "BepInEx", "core", "BepInEx.dll")))
+        {
+            dll.Method("Chainloader", "get_DependencyErrors");
+            dll.Method("Chainloader", "get_PluginInfos");
+        }
         using (var dll = new AssemblyContract(Path.Combine(args[0], "Terrain.dll")))
         {
             dll.Method("NPC_Horde_Mgr", "_Start");
@@ -107,10 +122,27 @@ internal static class Program
             dll.Method("NPC_Horde_Mgr", "GetValidSpawnPosition", "startPos", "minSpawnDis", "spawnRadius", "maxAttempts");
             dll.Method("NPC_Horde_Mgr", "Try_Get_Spawn_Context", "bioInfo");
             dll.Method("NPC_Horde_Mgr", "Save_Horde_Data_To_Disk");
+            dll.Method("NPC_Horde_Mgr", "Add_AliveHordeNPC", "npcObj", "npcInfo");
+            dll.Method("NPC_Horde_Mgr", "Remove_AliveHordeNPC", "npcObj");
+            dll.Method("NPC_Horde_Mgr", "Restore_Horde_NPCs");
+            dll.Method("NPC_Spawner_Mgr", "Back_Dead_NPC_To_Pool", "inputNPC");
+            dll.Fields("NPC_Horde_Mgr", "_ins", "_aliveHordeNPCs", "_G_Info");
             dll.Fields("NPC_Horde_Mgr", "_hordeSaveData", "_HordeZombieAll", "_ZombiesPioneerCount", "_ZombiesPerWaveAdd", "_MaxAllowActiveZombies", "_corHordeSpawn");
             dll.Fields("NPC_Spawner_Mgr", "NPC_Biomes");
-            dll.Fields("Terrain_Loader_Manager", "BigTerraWidth");
+            dll.Fields("Terrain_Loader_Manager", "BigTerraWidth", "_ins", "_biomesWidthDis");
+            dll.FieldType("NPC_Horde_Mgr", "_ins", "NPC_Horde_Mgr", true);
+            dll.FieldType("NPC_Horde_Mgr", "_aliveHordeNPCs", "Dictionary`2<GameObject,Horde_NPC_Info>");
+            dll.FieldType("NPC_Horde_Mgr", "_hordeSaveData", "Horde_Save_Data");
+            dll.FieldType("NPC_Horde_Mgr", "_corHordeSpawn", "Coroutine");
+            dll.FieldType("NPC_Horde_Mgr", "_G_Info", "Global_Infos");
+            dll.FieldType("NPC_Horde_Mgr", "_HordeZombieAll", "Int32");
+            dll.FieldType("NPC_Horde_Mgr", "_ZombiesPerWaveAdd", "Int32");
+            dll.FieldType("Terrain_Loader_Manager", "_ins", "Terrain_Loader_Manager", true);
+            dll.FieldType("Terrain_Loader_Manager", "BigTerraWidth", "Single");
+            dll.Fields("Horde_Save_Data", "spawnedWaveCount", "spawnedAlreadyCount", "spawnStartRealPos");
+            dll.Method("Terrain_Loader_Manager", "get_BiomesWidthDis");
         }
+        using (var dll = new AssemblyContract(Path.Combine(args[0], "Global_Funcs.dll"))) dll.Fields("Global_Infos", "_totalGameMinutes");
         using (var dll = new AssemblyContract(Path.Combine(args[0], "AI.dll")))
         {
             dll.Method("Zombie_Agent", "_Update");
@@ -125,6 +157,12 @@ internal static class Program
             dll.Method("GPUI_Dead_Body_Mgr", "Spawn_GPUI_Dead_Body", "body_Disk", "bioIndex", "bodyPrefabIndex", "groupIndex", "hasHead", "bodyPos", "spineToHeadDirect", "charForward", "ragdollMgr", "bloodDecalIns", "onTerraOrOnBI", "belongKey");
             dll.FieldReads("GPUI_Dead_Body_Mgr", "Spawn_GPUI_Dead_Body", "_MaxCorpseCount", 1);
             dll.Fields("GPUI_Dead_Body_Mgr", "_ActiveDeadBodies");
+            dll.Fields("GPUI_Dead_Body_Mgr", "_ins");
+            dll.FieldType("GPUI_Dead_Body_Mgr", "_ins", "GPUI_Dead_Body_Mgr", true);
+            dll.FieldType("GPUI_Dead_Body_Mgr", "_ActiveDeadBodies", "Dictionary`2<GameObject,InsInfo>");
+            dll.Method("GPUI_Dead_Body_Mgr", "Put_Back_Body_To_Pool", "bodyIns", "smashedBody", "fadeBloodDecal");
+            dll.CollectionMutation("GPUI_Dead_Body_Mgr", "Spawn_GPUI_Dead_Body", "_ActiveDeadBodies", "Add");
+            dll.CollectionMutation("GPUI_Dead_Body_Mgr", "Put_Back_Body_To_Pool", "_ActiveDeadBodies", "Remove");
             dll.Method("C_Controller_Base", "Play_Anim_BaseLayer", "clip", "clipTran", "transitionTime", "speed");
             dll.Fields("C_Controller_Base", "curr_Move_F", "Pressed_FastMove", "Pressed_Move", "currCharState");
             dll.Fields("NPC_Input", "_npcSpawnSource", "_inRunning");
@@ -161,6 +199,13 @@ internal static class Program
             var actual = Type(type).GetFields().Select(reader.GetFieldDefinition).Select(f => reader.GetString(f.Name)).ToHashSet();
             foreach (string name in names) Check(actual.Contains(name), $"Field injection: {type}.{name}");
         }
+        internal void FieldType(string type, string name, string expected, bool isStatic = false)
+        {
+            var field = Type(type).GetFields().Select(reader.GetFieldDefinition).Single(f => reader.GetString(f.Name) == name);
+            string actual = field.DecodeSignature(new TypeNames(), (object)null);
+            Check(actual == expected && ((field.Attributes & FieldAttributes.Static) != 0) == isStatic,
+                $"Compiled accessor contract {type}.{name}: expected {expected} static={isStatic}; found {actual}");
+        }
         internal void FieldReads(string type, string methodName, string fieldName, int expected)
         {
             var method = Type(type).GetMethods().Select(reader.GetMethodDefinition)
@@ -195,5 +240,57 @@ internal static class Program
             Check(count == expected, $"Verified narrow IL seam: {type}.{methodName} reads {fieldName} {expected} time(s)");
         }
         public void Dispose() { pe.Dispose(); stream.Dispose(); }
+        internal void CollectionMutation(string type, string methodName, string fieldName, string operation)
+        {
+            var t = Type(type);
+            var field = t.GetFields().Select(reader.GetFieldDefinition).Single(f => reader.GetString(f.Name) == fieldName);
+            var fieldType = reader.GetBlobBytes(field.Signature).Skip(1).ToArray();
+            var method = t.GetMethods().Select(reader.GetMethodDefinition).Single(m => reader.GetString(m.Name) == methodName);
+            byte[] il = pe.GetMethodBody(method.RelativeVirtualAddress).GetILBytes();
+            var codes = typeof(OpCodes).GetFields().Where(f => f.FieldType == typeof(OpCode)).Select(f => (OpCode)f.GetValue(null)).ToDictionary(o => unchecked((ushort)o.Value));
+            int offset = 0, count = 0;
+            while (offset < il.Length)
+            {
+                ushort key = il[offset++]; if (key == 0xfe) key = (ushort)(0xfe00 | il[offset++]);
+                var code = codes[key];
+                if (code == OpCodes.Call || code == OpCodes.Callvirt)
+                {
+                    var handle = MetadataTokens.EntityHandle(BitConverter.ToInt32(il, offset));
+                    if (handle.Kind == HandleKind.MemberReference)
+                    {
+                        var m = reader.GetMemberReference((MemberReferenceHandle)handle);
+                        if (reader.GetString(m.Name) == operation && m.Parent.Kind == HandleKind.TypeSpecification &&
+                            reader.GetBlobBytes(reader.GetTypeSpecification((TypeSpecificationHandle)m.Parent).Signature).SequenceEqual(fieldType)) count++;
+                    }
+                }
+                offset += code.OperandType switch
+                {
+                    OperandType.InlineNone => 0,
+                    OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => 1,
+                    OperandType.InlineVar => 2,
+                    OperandType.InlineI8 or OperandType.InlineR => 8,
+                    OperandType.InlineSwitch => 4 + 4 * BitConverter.ToInt32(il, offset),
+                    _ => 4
+                };
+            }
+            Check(count == 1, $"Unique verified collection mutation: {type}.{methodName} {fieldName}.{operation}");
+        }
+    }
+    private sealed class TypeNames : ISignatureTypeProvider<string, object>
+    {
+        public string GetArrayType(string elementType, ArrayShape shape) => elementType + "[" + new string(',', shape.Rank - 1) + "]";
+        public string GetByReferenceType(string elementType) => elementType + "&";
+        public string GetFunctionPointerType(MethodSignature<string> signature) => "function";
+        public string GetGenericInstantiation(string genericType, ImmutableArray<string> typeArguments) => genericType + "<" + string.Join(",", typeArguments) + ">";
+        public string GetGenericMethodParameter(object context, int index) => "!!" + index;
+        public string GetGenericTypeParameter(object context, int index) => "!" + index;
+        public string GetModifiedType(string modifier, string unmodifiedType, bool isRequired) => unmodifiedType;
+        public string GetPinnedType(string elementType) => elementType;
+        public string GetPointerType(string elementType) => elementType + "*";
+        public string GetPrimitiveType(PrimitiveTypeCode code) => code.ToString();
+        public string GetSZArrayType(string elementType) => elementType + "[]";
+        public string GetTypeFromDefinition(MetadataReader reader, TypeDefinitionHandle handle, byte kind) => reader.GetString(reader.GetTypeDefinition(handle).Name);
+        public string GetTypeFromReference(MetadataReader reader, TypeReferenceHandle handle, byte kind) => reader.GetString(reader.GetTypeReference(handle).Name);
+        public string GetTypeFromSpecification(MetadataReader reader, object context, TypeSpecificationHandle handle, byte kind) => reader.GetTypeSpecification(handle).DecodeSignature(this, context);
     }
 }

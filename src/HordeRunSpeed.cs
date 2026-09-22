@@ -15,7 +15,7 @@ namespace ExpandedHordes
             ClipTransition clipTran, ref float speed)
         {
             if (!FeatureRuntime.Enabled(Feature.Movement) || !(__instance is Zombie_Input zombie)) return;
-            long started = PerformanceMonitor.Begin();
+            var started = PerformanceMonitor.Begin(ProfileSection.RunSpeed);
             try
             {
                 NPC_Horde_Mgr horde = NPC_Horde_Mgr.ins;
@@ -33,7 +33,7 @@ namespace ExpandedHordes
                     zombie._npcSpawnSource, running, runAnimation);
             }
             catch (Exception ex) { FeatureRuntime.Fail(Feature.Movement, ex); }
-            finally { PerformanceMonitor.End(ProfileSection.RunSpeed, started); }
+            finally { PerformanceMonitor.End(started); }
             // Only the call argument changes. The next native movement call restores
             // normal speed when spawning ends; no pooled or saved stat is modified.
         }

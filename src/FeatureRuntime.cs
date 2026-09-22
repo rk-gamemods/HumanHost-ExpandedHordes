@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Reflection;
 using HarmonyLib;
 
 namespace ExpandedHordes
 {
-    internal enum Feature { Population, Catalog, Composition, Attraction, Movement, Resistance, Corpses, Diagnostics, Profiling }
+    internal enum Feature { Population, Catalog, Composition, Attraction, Movement, Resistance, Corpses, Diagnostics, Profiling, CorpseDiagnostics }
 
     // Patch ownership is per feature. A failed optional hook does not disable the horde.
     internal static class FeatureRuntime
@@ -14,6 +15,16 @@ namespace ExpandedHordes
         private static readonly Dictionary<Feature, Harmony> Installed = new Dictionary<Feature, Harmony>();
         private static readonly HashSet<Feature> Failed = new HashSet<Feature>();
         private static readonly HashSet<string> Warnings = new HashSet<string>();
+        private static readonly HashSet<MethodBase> Targets = new HashSet<MethodBase>();
+        internal static IEnumerable<MethodBase> OwnedTargets => Targets;
+        internal static bool TargetInventoryComplete = true;
+        internal static string DisabledSummary { get; private set; } = "none";
+        internal static bool Owns(string owner)
+        {
+            foreach (var installed in Installed.Values)
+                if (string.Equals(installed.Id, owner, StringComparison.Ordinal)) return true;
+            return false;
+        }
 
         internal static void WarnOnce(string key, string message)
         {
@@ -37,19 +48,34 @@ namespace ExpandedHordes
                     harmony.CreateClassProcessor(patch).Patch();
                 }
                 Installed.Add(feature, harmony);
-                DebugLog($"Enabled {feature} ({patches.Length} patch classes).");
-                if (ModSettings.DebugMode.Value)
-                    foreach (var method in harmony.GetPatchedMethods())
-                    {
-                        var owners = Harmony.GetPatchInfo(method)?.Owners.Where(o => !o.StartsWith(ModIdentity.Guid, StringComparison.Ordinal));
-                        if (owners != null && owners.Any()) DebugLog($"Shared hook {method.DeclaringType?.Name}.{method.Name}; other owners: {string.Join(", ", owners)}. This is overlap, not proof of conflict.");
-                    }
             }
             catch (Exception ex)
             {
                 try { harmony.UnpatchSelf(); }
                 catch (Exception rollback) { Plugin.Log.LogError($"Could not roll back {feature} patches: {rollback}"); }
                 Fail(feature, ex);
+                return;
+            }
+            // Optional inventory cannot roll back an otherwise installed gameplay feature.
+            if (!ModSettings.DebugMode.Value && !ModSettings.Profiling.Value) return;
+            try
+            {
+                // Patch() returns replacement methods. Inventory needs originals.
+                // Resolve them once at installation, not on every report rescan.
+                var targets = harmony.GetPatchedMethods().ToArray();
+                foreach (var target in targets) Targets.Add(target);
+                DebugLog($"Enabled {feature} ({patches.Length} patch classes).");
+                if (ModSettings.DebugMode.Value)
+                    foreach (var method in targets)
+                    {
+                        var owners = Harmony.GetPatchInfo(method)?.Owners.Where(o => !Owns(o));
+                        if (owners != null && owners.Any()) DebugLog($"Shared hook {method.DeclaringType?.Name}.{method.Name}; other owners: {string.Join(", ", owners)}. This is overlap, not proof of conflict.");
+                    }
+            }
+            catch (Exception ex)
+            {
+                TargetInventoryComplete = false;
+                Plugin.Log.LogWarning("Patch inventory incomplete: " + ex.GetType().Name);
             }
         }
 
@@ -57,6 +83,7 @@ namespace ExpandedHordes
         {
             if (Failed.Add(feature))
             {
+                DisabledSummary = string.Join(", ", Failed);
                 Plugin.Log.LogError($"{feature} disabled for this session; native behavior is retained where possible. {error}");
                 if (feature == Feature.Population)
                 {
@@ -79,7 +106,10 @@ namespace ExpandedHordes
                 catch (Exception ex) { Plugin.Log.LogError($"Could not remove owned patches {patch.Id}: {ex}"); }
             }
             Installed.Clear();
+            Targets.Clear();
+            TargetInventoryComplete = true;
             Failed.Clear();
+            DisabledSummary = "none";
             Warnings.Clear();
         }
     }

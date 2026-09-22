@@ -56,13 +56,18 @@ affected feature and log an error; this cannot recover from every possible game
 or other-mod failure. Debug hook overlap is information, not proof of conflict.
 Population cleanup restores fields only when they still match this mod's last write.
 
-Profiling reports inclusive method time, not a complete frame breakdown. Timed
-sections can overlap; asynchronous continuations are outside the synchronous
-method timing. Frame mean/max cover all valid frames; p95 uses at most the first
-8,192 frames in each window. Memory is managed heap, not total RAM or VRAM.
-Missing population counts are -1. CPU/GPU timing depends on Unity exposing it,
-and no per-mod GPU attribution is attempted. CSV errors disable file output while
-log summaries continue. Debug/profiling default off and add no network telemetry.
+Diagnostics use one main-thread collector, four reusable batch buffers and a
+single background writer. A fixed histogram covers every valid frame; p95/p99
+are 0.25 ms upper-bin approximations through 512 ms, with explicit overflow.
+Detailed method timing is separately enabled, sampled, inclusive and limited
+to synchronous execution. It is not a complete frame breakdown. Light mode
+does not install diagnostic per-zombie update patches.
+
+Memory means managed heap. Missing numeric data is -1; CPU/GPU samples are
+delayed and are not aligned to the current population bucket. A writer failure
+stops file output and produces a BepInEx warning; HUD/session counters continue.
+Shutdown waits at most 250 ms and warns about unsaved data. See
+[DIAGNOSTICS.md](DIAGNOSTICS.md) for ownership, native seams, schema and evidence.
 
 No extra loot-preservation system, permanent ragdoll physics, attack/jump changes,
 adaptive population, guaranteed boss quotas or custom event scheduler is included.

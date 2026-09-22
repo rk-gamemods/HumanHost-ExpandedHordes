@@ -3,6 +3,7 @@ using System;
 using BepInEx;
 using BepInEx.Logging;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace ExpandedHordes
 {
@@ -27,20 +28,21 @@ namespace ExpandedHordes
             FeatureRuntime.Install(Feature.Attraction, typeof(HordeStart));
             FeatureRuntime.Install(Feature.Movement, typeof(HordeRunSpeed));
             FeatureRuntime.Install(Feature.Corpses, typeof(CorpseRetention));
-            if (ModSettings.DebugMode.Value)
-                FeatureRuntime.Install(Feature.Diagnostics, typeof(PlacementResult), typeof(ContextResult), typeof(PlacementSummary));
-            if (ModSettings.Profiling.Value)
-            {
-                FeatureRuntime.InstallProfiler();
-                PerformanceMonitor.Start(Path.GetDirectoryName(Info.Location));
-            }
+            try { PerformanceMonitor.Start(Path.GetDirectoryName(Info.Location)); }
+            catch (Exception ex) { Log.LogError("Diagnostics initialization failed: " + ex.GetType().Name); PerformanceMonitor.Stop(); }
+            if (PerformanceMonitor.Active) SceneManager.sceneUnloaded += OnSceneUnloaded;
             Log.LogInfo($"Expanded Hordes {Version} loaded | game {Application.version} | base budget {ModSettings.Total.Value}, living {ModSettings.Living.Value}, shared AI {ModSettings.Allowance.Value}, run speed {ModSettings.RunSpeedPercent.Value}%; resistance regular/large/boss {ModSettings.RegularResistance.Value}/{ModSettings.LargeResistance.Value}/{ModSettings.BossResistance.Value}%; corpse target {ModSettings.CorpseLimit.Value}. Restart after configuration changes.");
         }
 
         private void Update() => PerformanceMonitor.Update();
+        private void OnGUI() => PerformanceMonitor.Draw();
+        private void OnApplicationPause(bool paused) => PerformanceMonitor.Boundary(paused ? WindowEnd.Pause : WindowEnd.Resume);
+        private void OnApplicationQuit() => PerformanceMonitor.Stop();
+        private void OnSceneUnloaded(Scene scene) => PerformanceMonitor.Boundary(WindowEnd.SceneUnload);
 
         private void OnDestroy()
         {
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
             PlacementLog.Flush();
             PerformanceMonitor.Stop();
             try { PopulationOverrides.Restore(); }

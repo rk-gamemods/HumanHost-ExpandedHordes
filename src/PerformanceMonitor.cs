@@ -1,183 +1,276 @@
 using System;
-using System.Collections;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
-using System.Reflection;
-using System.Text;
+using System.Threading;
 using HarmonyLib;
 using UnityEngine;
 
 namespace ExpandedHordes
 {
     internal enum ProfileSection { ZombieUpdate, Placement, CorpseCreation, HordeSave, Resistance, RunSpeed, Composition, Count }
-
     internal static class PerformanceMonitor
     {
-        private const float Interval = 15f;
-        private const long MaxCsvBytes = 5 * 1024 * 1024;
-        private static readonly FrameWindow Frames = new FrameWindow();
+        private static TelemetryCollector collector;
+        private static TelemetryWriter writer;
+        private static DetailSampler sampler;
+        private static TelemetryHud hudData;
         private static readonly FrameTiming[] Timing = new FrameTiming[1];
-        private static readonly long[] Counts = new long[(int)ProfileSection.Count];
-        private static readonly long[] Ticks = new long[(int)ProfileSection.Count];
-        private static readonly long[] MaxTicks = new long[(int)ProfileSection.Count];
-        private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
-        private static readonly FieldInfo Alive = AccessTools.Field(typeof(NPC_Horde_Mgr), "_aliveHordeNPCs");
-        private static readonly FieldInfo Bodies = AccessTools.Field(typeof(GPUI_Dead_Body_Mgr), "_ActiveDeadBodies");
-        private static bool active, csvEnabled, timingAvailable;
-        private static string csvPath;
-        private static float lastReport;
-        private static ulong lastTimestamp;
-        private static int mainCount, renderCount, gpuCount, waitCount, lastGc;
-        private static double mainMs, renderMs, gpuMs, waitMs;
-
-        internal static bool Active => active && FeatureRuntime.Enabled(Feature.Profiling);
-        internal static long Begin() => Active ? Stopwatch.GetTimestamp() : 0;
-        internal static void End(ProfileSection section, long started)
+        private static bool active, detail, persist, hud, timing, warnedWriter, writerQuarantined;
+        private static int mainThread, gc0, gc1, gc2, marker;
+        private static long origin;
+        private static double nextSlow, nextTiming, nextHud, nextInventory;
+        private static ulong lastTiming;
+        private static double cachedNow;
+        private static long lastHordeSummaryAttempt;
+        private static string session, reportDirectory;
+        private static GUIStyle style;
+        private static GUIContent content;
+        private static Rect bounds;
+        private static KeyCode hudKey, markerKey, rescanKey, folderKey;
+        private static float hudScale;
+        private static bool hudLayoutDirty;
+        internal static bool Active => active;
+        internal static long WrongThreadEvents;
+        internal static bool OnMain
         {
-            if (started == 0 || !Active) return;
-            long elapsed = Math.Max(0, Stopwatch.GetTimestamp() - started);
-            int index = (int)section;
-            Counts[index]++; Ticks[index] += elapsed; MaxTicks[index] = Math.Max(MaxTicks[index], elapsed);
+            get
+            {
+                if (!active) return false;
+                if (Thread.CurrentThread.ManagedThreadId == mainThread) return true;
+                Interlocked.Increment(ref WrongThreadEvents); return false;
+            }
         }
+        private static double Now => (Stopwatch.GetTimestamp() - origin) * (1000d / Stopwatch.Frequency);
 
+        internal static void Record(TelemetryEvent kind)
+        {
+            if (!active) return;
+            if (Thread.CurrentThread.ManagedThreadId != mainThread) { Interlocked.Increment(ref WrongThreadEvents); return; }
+            collector.Record(kind);
+        }
+        internal static void ObserveRegisteredHorde()
+        {
+            if (OnMain) collector.ObserveHorde(GameTelemetry.HordeId, cachedNow);
+        }
+        internal static TimingSample Begin(ProfileSection section)
+        {
+            if (!detail || !OnMain || !sampler.Select((int)section, collector.Batch)) return default;
+            return new TimingSample(collector.Batch, (int)section, Stopwatch.GetTimestamp());
+        }
+        internal static void End(TimingSample started)
+        {
+            if (!started.Active || !detail || !OnMain) return;
+            started.Complete(collector.Batch, Stopwatch.GetTimestamp());
+        }
         internal static void Start(string directory)
         {
-            if (active || !ModSettings.Profiling.Value || !FeatureRuntime.Enabled(Feature.Profiling)) return;
-            csvPath = Path.Combine(directory, "performance.csv");
-            csvEnabled = timingAvailable = active = true;
-            lastReport = Time.realtimeSinceStartup;
-            lastGc = GC.CollectionCount(0);
-            Reset();
-            Plugin.Log.LogInfo("Performance profiling enabled: 15-second aggregates; timings include measurement overhead. CPU/GPU hints are not causal diagnoses.");
+            if (active) return;
+            if (writerQuarantined) { Plugin.Log.LogWarning("Diagnostics requires a game restart after an incomplete writer shutdown."); return; }
+            marker = 0; WrongThreadEvents = 0; cachedNow = 0; lastHordeSummaryAttempt = 0; lastTiming = 0;
+            warnedWriter = false;
+            style = null; content = null;
+            GameTelemetry.RestoreDepth = GameTelemetry.DeathDepth = 0;
+            hud = ModSettings.DebugHud.Value;
+            persist = ModSettings.Profiling.Value || ModSettings.DebugMode.Value;
+            if (!hud && !persist) return;
+            mainThread = Thread.CurrentThread.ManagedThreadId; origin = Stopwatch.GetTimestamp();
+            session = DateTime.UtcNow.ToString("yyyyMMddTHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+            hudKey = ModSettings.HudKey.Value; markerKey = ModSettings.MarkerKey.Value; rescanKey = ModSettings.RescanKey.Value;
+            folderKey = ModSettings.FolderKey.Value; reportDirectory = Path.Combine(directory, "diagnostics");
+            hudScale = ModSettings.HudScale.Value;
+            bounds = new Rect(ModSettings.HudX.Value, ModSettings.HudY.Value, 920 * hudScale, 260 * hudScale);
+            GameTelemetry.Initialize();
+            if (persist) writer = new TelemetryWriter(new TelemetryFileSink(reportDirectory, session, CaptureInventory(), ModSettings.ReportFileMiB.Value * 1024L * 1024));
+            collector = new TelemetryCollector(0, writer?.Initial ?? new TelemetryBatch());
+            sampler = new DetailSampler(); hudData = new TelemetryHud(); active = true;
+            timing = ModSettings.Profiling.Value;
+            detail = ModSettings.Profiling.Value && ModSettings.DetailedTimings.Value;
+            if (detail) { FeatureRuntime.InstallProfiler(); detail = FeatureRuntime.Enabled(Feature.Profiling); }
+            FeatureRuntime.Install(Feature.Diagnostics, typeof(PlacementResult), typeof(ContextResult),
+                typeof(ObserveRegistration), typeof(ObserveRemoval), typeof(ObserveRestore), typeof(ObserveDeath));
+            GameTelemetry.LifecycleAvailable = FeatureRuntime.Enabled(Feature.Diagnostics) && GameTelemetry.MembershipAvailable;
+            FeatureRuntime.Install(Feature.CorpseDiagnostics, typeof(ObserveCorpseAdded), typeof(ObserveCorpseRemoved));
+            GameTelemetry.CorpseEventsAvailable = FeatureRuntime.Enabled(Feature.CorpseDiagnostics);
+            nextInventory = 5000; nextSlow = nextTiming = nextHud = 0;
+            gc0 = GC.CollectionCount(0); gc1 = GC.CollectionCount(1); gc2 = GC.CollectionCount(2);
+            Plugin.Log.LogInfo("Diagnostics enabled: nominal 100 ms buckets, 15-second background writes; detailed timings=" + detail + ". Runtime overhead remains unverified.");
         }
-
         internal static void Update()
         {
-            if (!Active) return;
+            if (!active) return;
             try
             {
-                Frames.Add(Time.unscaledDeltaTime * 1000d);
-                if (timingAvailable)
+                double now = Now; cachedNow = now;
+                collector.Frame(now);
+                collector.ObserveHorde(GameTelemetry.HordeId, now);
+                if (collector.BucketDue(now))
                 {
-                    try
-                    {
-                        FrameTimingManager.CaptureFrameTimings();
-                        if (FrameTimingManager.GetLatestTimings(1, Timing) > 0 && Timing[0].frameStartTimestamp != lastTimestamp)
-                        {
-                            var t = Timing[0]; lastTimestamp = t.frameStartTimestamp;
-                            if (Valid(t.cpuMainThreadFrameTime))
-                            {
-                                mainCount++; mainMs += t.cpuMainThreadFrameTime;
-                                if (t.cpuMainThreadPresentWaitTime >= 0 && !double.IsInfinity(t.cpuMainThreadPresentWaitTime))
-                                { waitCount++; waitMs += t.cpuMainThreadPresentWaitTime; }
-                            }
-                            if (Valid(t.cpuRenderThreadFrameTime)) { renderCount++; renderMs += t.cpuRenderThreadFrameTime; }
-                            if (Valid(t.gpuFrameTime)) { gpuCount++; gpuMs += t.gpuFrameTime; }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        timingAvailable = false;
-                        FeatureRuntime.WarnOnce("frame-timings", "Unity frame timings unavailable; FPS and method profiling continue. " + ex.Message);
-                    }
+                    bool wasSpawning = collector.Latest.State.Spawning;
+                    var sample = GameTelemetry.Sample(); collector.CloseBucket(now, sample); sampler.Rotate();
+                    if (wasSpawning && sample.SpawningKnown && !sample.Spawning) collector.SnapshotHorde(now, WindowEnd.SpawningStopped);
                 }
-                if (Time.realtimeSinceStartup - lastReport >= Interval) Report();
+                if (persist && now >= nextSlow)
+                {
+                    nextSlow = now + 1000; var b = collector.Batch; b.ManagedBytes = GC.GetTotalMemory(false);
+                    hudData.ManagedBytes = b.ManagedBytes; hudData.ManagedReadMs = now;
+                    collector.Horde.PeakManaged = Math.Max(collector.Horde.PeakManaged, b.ManagedBytes);
+                    int a = GC.CollectionCount(0), c = GC.CollectionCount(1), d = GC.CollectionCount(2);
+                    b.Gc0 += a - gc0; b.Gc1 += c - gc1; b.Gc2 += d - gc2; gc0 = a; gc1 = c; gc2 = d;
+                }
+                if (timing && now >= nextTiming) { nextTiming = now + 200; ReadTiming(now); }
+                bool newHordeSummary = collector.HordeSummarySequence != lastHordeSummaryAttempt;
+                if (newHordeSummary || collector.BatchDue(now))
+                {
+                    lastHordeSummaryAttempt = collector.HordeSummarySequence;
+                    Publish(now, newHordeSummary ? WindowEnd.HordeChange : WindowEnd.Cadence);
+                }
+                if (Input.GetKeyDown(hudKey)) hud = !hud;
+                if (Input.GetKeyDown(markerKey))
+                {
+                    string note = ModSettings.MarkerNote.Value ?? "";
+                    if (note.Length > 80) note = note.Substring(0, 80);
+                    note = note.Replace('\r', ' ').Replace('\n', ' ');
+                    collector.Mark(++marker, cachedNow, note);
+                }
+                if (persist && Input.GetKeyDown(folderKey))
+                {
+                    try { Process.Start(new ProcessStartInfo(reportDirectory) { UseShellExecute = true }); }
+                    catch { Plugin.Log.LogWarning("Could not open diagnostics folder; reports may not have been written yet."); }
+                }
+                if ((persist && now >= nextInventory) || (persist && Input.GetKeyDown(rescanKey)))
+                { nextInventory = double.PositiveInfinity; collector.SetMetadata(CaptureInventory(), now); }
+                if (hud && now >= nextHud) { nextHud = now + 250; RefreshHud(now); }
+                if (writer != null && writer.Failed && !warnedWriter)
+                { warnedWriter = true; Plugin.Log.LogWarning("Diagnostics writer failed. Gameplay continues; unsaved batches are counted. Check report-folder permissions and free space."); }
             }
-            catch (Exception ex) { FeatureRuntime.Fail(Feature.Profiling, ex); active = false; }
+            catch (Exception ex) { Plugin.Log.LogError("Diagnostics stopped: " + ex.GetType().Name); Stop(); }
         }
-
-        private static bool Valid(double value) => value > 0 && !double.IsInfinity(value);
-        private static string Number(double value) => value.ToString("F3", Invariant);
-        private static string Average(double total, int count) => count == 0 ? "unavailable" : Number(total / count);
-        private static int ReadCount(FieldInfo field, object owner) => owner == null || field == null ? -1 : (field.GetValue(owner) as ICollection)?.Count ?? -1;
-
-        private static void Report()
+        private static string CaptureInventory()
         {
-            if (Frames.Count == 0) return;
-            double cpu = Math.Max(mainCount == 0 ? 0 : mainMs / mainCount, renderCount == 0 ? 0 : renderMs / renderCount);
-            double gpu = gpuCount == 0 ? 0 : gpuMs / gpuCount;
-            string hint = PerformanceRules.Hint(cpu, gpu, waitCount == 0 ? 0 : waitMs / waitCount, Frames.Mean);
-            int gc = GC.CollectionCount(0), collections = Math.Max(0, gc - lastGc); lastGc = gc;
-            int living = ReadCount(Alive, NPC_Horde_Mgr.ins), bodies = ReadCount(Bodies, GPUI_Dead_Body_Mgr.ins);
-            double memory = GC.GetTotalMemory(false) / (1024d * 1024d);
-            var row = new StringBuilder(DateTime.UtcNow.ToString("O", Invariant));
-            row.Append(',').Append(Frames.Count).Append(',').Append(Frames.SampleCount)
-                .Append(',').Append(Number(1000d / Frames.Mean)).Append(',').Append(Number(Frames.Mean))
-                .Append(',').Append(Number(Frames.Percentile95())).Append(',').Append(Number(Frames.Maximum))
-                .Append(',').Append(Average(mainMs, mainCount)).Append(',').Append(Average(renderMs, renderCount))
-                .Append(',').Append(Average(gpuMs, gpuCount)).Append(',').Append(Average(waitMs, waitCount))
-                .Append(',').Append(mainCount).Append(',').Append(renderCount).Append(',').Append(gpuCount).Append(',').Append(waitCount).Append(',').Append(hint)
-                .Append(',').Append(Number(memory)).Append(',').Append(collections).Append(',').Append(living).Append(',').Append(bodies);
-            var sections = new StringBuilder();
-            for (int i = 0; i < Counts.Length; i++)
+            try { return DiagnosticEnvironment.Capture(session); }
+            catch (Exception ex)
             {
-                double total = Ticks[i] * 1000d / Stopwatch.Frequency;
-                double max = MaxTicks[i] * 1000d / Stopwatch.Frequency;
-                row.Append(',').Append(Counts[i]).Append(',').Append(Number(total)).Append(',').Append(Number(max));
-                if (Counts[i] > 0) sections.Append($" {(ProfileSection)i}={Number(total)}ms/{Counts[i]}calls max={Number(max)}ms;");
+                // Optional inventory failure cannot stop the numeric collector or
+                // expose arbitrary third-party exception messages and private paths.
+                return "environment_capture_failed=true; error_type=" + ex.GetType().Name;
             }
-            Plugin.Log.LogInfo($"[profile] FPS={Number(1000d / Frames.Mean)} frame avg/p95/max={Number(Frames.Mean)}/{Number(Frames.Percentile95())}/{Number(Frames.Maximum)}ms CPU main/render={Average(mainMs, mainCount)}/{Average(renderMs, renderCount)}ms GPU={Average(gpuMs, gpuCount)}ms hint={hint}; horde living={living}, settled corpses={bodies}, managed={Number(memory)}MiB, gen0 GC={collections}; measured inclusive method totals:{sections}");
-            WriteCsv(row.ToString());
-            Reset(); lastReport = Time.realtimeSinceStartup;
         }
-
-        private static void WriteCsv(string row)
+        private static void ReadTiming(double now)
         {
-            if (!csvEnabled) return;
             try
             {
-                if (File.Exists(csvPath) && new FileInfo(csvPath).Length >= MaxCsvBytes)
-                {
-                    string previous = Path.Combine(Path.GetDirectoryName(csvPath), "performance.previous.csv");
-                    if (File.Exists(previous)) File.Delete(previous);
-                    File.Move(csvPath, previous);
-                }
-                if (!File.Exists(csvPath))
-                {
-                    var header = new StringBuilder("utc,frames,percentile_samples,fps,frame_mean_ms,frame_p95_ms,frame_max_ms,cpu_main_ms,cpu_render_ms,gpu_ms,present_wait_ms,cpu_main_samples,cpu_render_samples,gpu_samples,present_wait_samples,hint,managed_mib,gc_gen0,horde_living,settled_corpses");
-                    for (int i = 0; i < Counts.Length; i++) header.Append($",{(ProfileSection)i}_calls,{(ProfileSection)i}_total_ms,{(ProfileSection)i}_max_ms");
-                    File.WriteAllText(csvPath, header + Environment.NewLine);
-                }
-                File.AppendAllText(csvPath, row + Environment.NewLine);
+                FrameTimingManager.CaptureFrameTimings();
+                if (FrameTimingManager.GetLatestTimings(1, Timing) == 0) return;
+                var t = Timing[0];
+                if (t.frameStartTimestamp == 0 || t.frameStartTimestamp == lastTiming) return;
+                lastTiming = t.frameStartTimestamp;
+                var b = collector.Batch; b.TimingSource = lastTiming; b.TimingReadMs = now;
+                if (t.cpuMainThreadFrameTime > 0 && !double.IsInfinity(t.cpuMainThreadFrameTime)) { b.CpuTotal += t.cpuMainThreadFrameTime; b.CpuSamples++; }
+                if (t.gpuFrameTime > 0 && !double.IsInfinity(t.gpuFrameTime)) { b.GpuTotal += t.gpuFrameTime; b.GpuSamples++; }
             }
-            catch (Exception ex) { csvEnabled = false; FeatureRuntime.WarnOnce("profile-csv", "Profiling CSV disabled; log summaries continue. " + ex.Message); }
+            catch { timing = false; }
         }
-
-        private static void Reset()
+        private static void Publish(double now, WindowEnd reason)
         {
-            Frames.Reset(); mainCount = renderCount = gpuCount = waitCount = 0; mainMs = renderMs = gpuMs = waitMs = 0;
-            Array.Clear(Counts, 0, Counts.Length); Array.Clear(Ticks, 0, Ticks.Length); Array.Clear(MaxTicks, 0, MaxTicks.Length);
+            collector.CloseBucket(now, GameTelemetry.Sample());
+            // Explicit boundaries can carry final horde/marker/metadata records
+            // even when no time has elapsed since the previous publication.
+            collector.Complete(now, reason); var b = collector.Batch;
+            b.LifecycleAvailable = GameTelemetry.LifecycleAvailable;
+            b.CorpseEventsAvailable = GameTelemetry.CorpseEventsAvailable;
+            b.PlacementAvailable = FeatureRuntime.Enabled(Feature.Diagnostics);
+            b.CategoryAvailable = GameTelemetry.LifecycleAvailable && FeatureRuntime.Enabled(Feature.Catalog);
+            b.WrongThreadEvents = Interlocked.Read(ref WrongThreadEvents);
+            b.WriterFailures = writer?.FailedBatches ?? 0;
+            b.WriterLagMs = writer?.MaxLagMs ?? 0;
+            b.DebugMode = ModSettings.DebugMode.Value; b.ProfilingMode = ModSettings.Profiling.Value;
+            b.HudMode = hud; b.DetailedMode = detail; b.EngineTimingAvailable = timing;
+            hudData.CaptureWindow(b);
+            b.PublishedTicks = Stopwatch.GetTimestamp();
+            if (writer != null) { writer.TryPublish(b, out var next); collector.Next(next, now); }
+            else { b.Reset(now); collector.HasPendingHorde = false; }
+            lastHordeSummaryAttempt = collector.HordeSummarySequence;
         }
-        internal static void Stop() { active = false; Reset(); lastTimestamp = 0; }
+        private static void RefreshHud(double now)
+        {
+            hudData.Detailed = detail; hudData.LifecycleAvailable = GameTelemetry.LifecycleAvailable;
+            hudData.CorpseEventsAvailable = GameTelemetry.CorpseEventsAvailable;
+            hudData.PlacementAvailable = FeatureRuntime.Enabled(Feature.Diagnostics);
+            hudData.CategoryAvailable = GameTelemetry.LifecycleAvailable && FeatureRuntime.Enabled(Feature.Catalog);
+            hudData.DisabledFeatures = FeatureRuntime.DisabledSummary;
+            if (content == null) content = new GUIContent();
+            content.text = hudData.Format(collector, writer, marker, now, WrongThreadEvents);
+            hudLayoutDirty = true;
+        }
+        internal static void Draw()
+        {
+            if (!active || !hud || content == null || Event.current.type != EventType.Repaint) return;
+            if (style == null) style = new GUIStyle(GUI.skin.box) { alignment = TextAnchor.UpperLeft, fontSize = Mathf.RoundToInt(14 * hudScale), richText = false, wordWrap = true };
+            if (hudLayoutDirty)
+            {
+                // Recalculate only when cached text changes. Wrapped unavailable
+                // values and disabled-feature names must not be clipped by a fixed height.
+                bounds.height = style.CalcHeight(content, bounds.width) + 8 * hudScale;
+                hudLayoutDirty = false;
+            }
+            GUI.Box(bounds, content, style);
+        }
+        internal static void Boundary(WindowEnd reason)
+        {
+            if (!active) return;
+            try
+            {
+                double now = Now;
+                collector.CloseBucket(now, GameTelemetry.Sample());
+                if (reason == WindowEnd.SceneUnload) collector.EndHorde(now, reason);
+                else if (reason == WindowEnd.Pause) collector.SnapshotHorde(now, reason);
+                Publish(now, reason);
+            }
+            catch { Stop(); }
+        }
+        internal static void Stop()
+        {
+            if (!active) return;
+            long droppedBeforeStop = collector.DroppedBatches;
+            try
+            {
+                double now = Now;
+                collector.CloseBucket(now, GameTelemetry.Sample());
+                collector.EndHorde(now, WindowEnd.Shutdown); Publish(now, WindowEnd.Shutdown);
+            }
+            catch { Plugin.Log.LogWarning("Could not snapshot final diagnostics window; final data may be unsaved."); }
+            finally
+            {
+                active = detail = false;
+                if (collector.DroppedBatches > droppedBeforeStop) Plugin.Log.LogWarning("Final diagnostics window could not be queued; session dropped buckets=" + collector.DroppedBuckets + "; lost marker notes=" + collector.LostMarkerNotes + "; lost metadata snapshots=" + collector.LostMetadataSnapshots);
+                if (writer != null && !writer.Stop(250))
+                { writerQuarantined = true; Plugin.Log.LogWarning("Diagnostics shutdown incomplete; unwritten batches=" + writer.Unwritten); }
+                writer = null;
+            }
+        }
     }
-
     [HarmonyPatch(typeof(Zombie_Agent), "_Update")]
     internal static class ProfileZombieUpdate
     {
-        private static void Prefix(out long __state) => __state = PerformanceMonitor.Begin();
-        private static Exception Finalizer(Exception __exception, long __state)
-        { PerformanceMonitor.End(ProfileSection.ZombieUpdate, __state); return __exception; }
+        private static void Prefix(out TimingSample __state) => __state = PerformanceMonitor.Begin(ProfileSection.ZombieUpdate);
+        private static Exception Finalizer(Exception __exception, TimingSample __state) { PerformanceMonitor.End(__state); return __exception; }
     }
     [HarmonyPatch(typeof(GPUI_Dead_Body_Mgr), "Spawn_GPUI_Dead_Body")]
     internal static class ProfileCorpseCreation
     {
-        private static void Prefix(out long __state) => __state = PerformanceMonitor.Begin();
-        private static Exception Finalizer(Exception __exception, long __state)
-        { PerformanceMonitor.End(ProfileSection.CorpseCreation, __state); return __exception; }
+        private static void Prefix(out TimingSample __state) => __state = PerformanceMonitor.Begin(ProfileSection.CorpseCreation);
+        private static Exception Finalizer(Exception __exception, TimingSample __state) { PerformanceMonitor.End(__state); return __exception; }
     }
     [HarmonyPatch(typeof(NPC_Horde_Mgr), "GetValidSpawnPosition")]
     internal static class ProfilePlacement
     {
-        private static void Prefix(out long __state) => __state = PerformanceMonitor.Begin();
-        private static Exception Finalizer(Exception __exception, long __state)
-        { PerformanceMonitor.End(ProfileSection.Placement, __state); return __exception; }
+        private static void Prefix(out TimingSample __state) => __state = PerformanceMonitor.Begin(ProfileSection.Placement);
+        private static Exception Finalizer(Exception __exception, TimingSample __state) { PerformanceMonitor.End(__state); return __exception; }
     }
     [HarmonyPatch(typeof(NPC_Horde_Mgr), "Save_Horde_Data_To_Disk")]
     internal static class ProfileHordeSave
     {
-        private static void Prefix(out long __state) => __state = PerformanceMonitor.Begin();
-        private static Exception Finalizer(Exception __exception, long __state)
-        { PerformanceMonitor.End(ProfileSection.HordeSave, __state); return __exception; }
+        private static void Prefix(out TimingSample __state) => __state = PerformanceMonitor.Begin(ProfileSection.HordeSave);
+        private static Exception Finalizer(Exception __exception, TimingSample __state) { PerformanceMonitor.End(__state); return __exception; }
     }
 }

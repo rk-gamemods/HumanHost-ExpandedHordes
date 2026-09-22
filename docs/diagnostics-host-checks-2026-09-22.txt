@@ -1,0 +1,11 @@
+HOST HUD text formatter: 3768 bytes/refresh; mean=3.009 us/refresh; excludes Unity GUIContent/style/draw and game adapters.
+OUTPUT: bucket row UTF8 bytes=104; projected 10 Hz bytes/hour=3744000; struct bytes=264
+HOST warmed 150-bucket formatter + buffered flush: 0.244 ms; allocations=152304 bytes; output=20487 bytes/batch; extrapolated=4916880 bytes/hour (synthetic workload, excludes manifests/horde snapshots).
+HOST .NET benchmark: 1000 event callbacks/s, 2,000 simulated seconds; bucket median/p95/p99/max us=0.000/0.100/0.100/0.300; zero-byte hot loop checked. Unity Mono/Harmony/HUD/engine/writer overhead NOT measured.
+HOST .NET benchmark: 10000 event callbacks/s, 2,000 simulated seconds; bucket median/p95/p99/max us=0.000/0.100/0.100/0.100; zero-byte hot loop checked. Unity Mono/Harmony/HUD/engine/writer overhead NOT measured.
+HOST numeric collector/four-batch/sampler allocations: 347864 bytes; excludes writer/runtime/metadata/UI.
+HOST production handoff: successes=999; immediate_rejections=1; median/p95/p99/max_us=1.2/1.8/3.6/42.7; forced_contention_reject_us=0.3. Includes producer scheduling noise; no Unity dispatch measured.
+HOST collector/writer allocation envelope: producer construction/full buffers=559960; first real writer batch=418384; combined=978344 bytes. Includes four maximal metadata snapshots, manifest, 64 marker notes, concurrent metadata builder, streams/encoding, and first-batch formatting; excludes Unity adapters/UI assets and runtime-specific dispatch. This is a conservative allocation envelope, not whole-process RAM.
+HOST event entry + thread guard + collector: mean=0.008 us/call over 10,000 calls; zero allocated bytes; excludes Harmony/native registration and Unity Mono.
+HOST extreme-format retention fixture: CSV=306535 bytes; log=62059 bytes; limits tested <1 MiB CSV and <256 KiB log per batch. Uses maximal numeric widths and metadata/marker capacities, not an expected hourly rate.
+PASS: 471 policy and installed-assembly contract assertions. Unity runtime behavior is not tested here.

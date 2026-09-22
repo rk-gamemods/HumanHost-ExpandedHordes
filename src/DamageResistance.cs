@@ -14,7 +14,7 @@ namespace ExpandedHordes
             if (!FeatureRuntime.Enabled(Feature.Resistance) || G_Save.isQuit
                 || !(value < __instance._CurrHP) || !(__instance._Controller is Zombie_Input zombie)
                 || zombie._npcSpawnSource != 2 || !zombie.gameObject.activeInHierarchy) return;
-            long started = PerformanceMonitor.Begin();
+            var started = PerformanceMonitor.Begin(ProfileSection.Resistance);
             try
             {
                 var manager = NPC_Horde_Mgr.ins;
@@ -27,7 +27,7 @@ namespace ExpandedHordes
                 value = CombatRules.ResistLoss(__instance._CurrHP, value, resistance);
             }
             catch (Exception ex) { FeatureRuntime.Fail(Feature.Resistance, ex); }
-            finally { PerformanceMonitor.End(ProfileSection.Resistance, started); }
+            finally { PerformanceMonitor.End(started); }
         }
     }
 }

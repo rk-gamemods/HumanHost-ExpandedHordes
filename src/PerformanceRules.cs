@@ -2,14 +2,14 @@ using System;
 
 namespace ExpandedHordes
 {
-    // Bounded storage, no per-frame allocations. The percentile covers up to the first
-    // 8,192 frames in each reporting window; mean/max cover every accepted frame.
+    // Upper-bound quantization, 0.25 ms through 512 ms. All frames are covered.
     internal sealed class FrameWindow
     {
-        private readonly double[] samples = new double[8192];
-        private readonly double[] sorted = new double[8192];
-        internal int Count { get; private set; }
-        internal int SampleCount { get; private set; }
+        internal const int BinCount = 2048;
+        private readonly long[] bins = new long[BinCount];
+        internal long Count { get; private set; }
+        internal long SampleCount => Count;
+        internal long Overflow { get; private set; }
         internal double Total { get; private set; }
         internal double Maximum { get; private set; }
         internal double Mean => Count == 0 ? 0 : Total / Count;
@@ -17,16 +17,28 @@ namespace ExpandedHordes
         {
             if (!(milliseconds > 0) || double.IsInfinity(milliseconds)) return;
             Count++; Total += milliseconds; Maximum = Math.Max(Maximum, milliseconds);
-            if (SampleCount < samples.Length) samples[SampleCount++] = milliseconds;
+            if (milliseconds > 512) Overflow++;
+            else bins[Math.Max(0, (int)Math.Ceiling(milliseconds * 4) - 1)]++;
         }
         internal double Percentile95()
         {
-            if (SampleCount == 0) return 0;
-            Array.Copy(samples, sorted, SampleCount);
-            Array.Sort(sorted, 0, SampleCount);
-            return sorted[(int)Math.Ceiling(SampleCount * 0.95) - 1];
+            return Percentile(0.95);
         }
-        internal void Reset() { Count = SampleCount = 0; Total = Maximum = 0; }
+        internal double Percentile(double fraction)
+        {
+            if (Count == 0) return 0;
+            long target = (long)Math.Ceiling(Count * fraction), seen = 0;
+            for (int i = 0; i < bins.Length; i++)
+                if ((seen += bins[i]) >= target) return (i + 1) * 0.25;
+            return double.PositiveInfinity;
+        }
+        internal void Merge(FrameWindow other)
+        {
+            Count += other.Count; Total += other.Total; Overflow += other.Overflow;
+            Maximum = Math.Max(Maximum, other.Maximum);
+            for (int i = 0; i < bins.Length; i++) bins[i] += other.bins[i];
+        }
+        internal void Reset() { Count = Overflow = 0; Total = Maximum = 0; Array.Clear(bins, 0, bins.Length); }
     }
 
     internal static class PerformanceRules
