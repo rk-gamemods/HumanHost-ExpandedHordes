@@ -9,5 +9,7 @@
     <Compile Include="../../src/PerformanceRules.cs" Link="PerformanceRules.cs" />
     <Compile Include="../../src/TelemetryCollector.cs" Link="TelemetryCollector.cs" />
     <Compile Include="../../src/TelemetryWriter.cs" Link="TelemetryWriter.cs" />
+    <Compile Include="../../src/TelemetryAccessors.cs" Link="TelemetryAccessors.cs" />
+    <Compile Include="../../src/TelemetryHud.cs" Link="TelemetryHud.cs" />
   </ItemGroup>
 </Project>

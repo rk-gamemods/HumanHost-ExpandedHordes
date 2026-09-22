@@ -11,6 +11,8 @@ namespace ExpandedHordes
         internal readonly FrameWindow Frames = new FrameWindow();
         internal int Id = -1, PeakAlive, PeakCorpses;
         internal double StartMs, EndMs, WorstWindowFps;
+        private double windowStartMs, windowFrameMs;
+        private long windowFrames;
         internal long PeakManaged, LostBuckets;
         internal PopulationSample Last;
         internal WindowEnd Reason;
@@ -18,7 +20,17 @@ namespace ExpandedHordes
         {
             Id = id; StartMs = EndMs = now; PeakAlive = PeakCorpses = -1;
             WorstWindowFps = double.PositiveInfinity; PeakManaged = -1; LostBuckets = 0;
+            windowStartMs = now; windowFrameMs = 0; windowFrames = 0;
             Last = PopulationSample.Unavailable; Array.Clear(Events, 0, Events.Length); Frames.Reset();
+        }
+        internal void Frame(double now, double milliseconds)
+        {
+            Frames.Add(milliseconds); windowFrameMs += milliseconds; windowFrames++;
+            // A horde's full intervals are independent of partial file publications.
+            // The entire spanning frame is retained, including after a stall.
+            if (now - windowStartMs < 15000) return;
+            WorstWindowFps = Math.Min(WorstWindowFps, 1000d * windowFrames / windowFrameMs);
+            windowStartMs = now; windowFrameMs = 0; windowFrames = 0;
         }
         internal void CopyTo(HordeObservation target)
         {
@@ -60,7 +72,8 @@ namespace ExpandedHordes
         internal const int Capacity = 150;
         internal readonly TelemetryBucket[] Buckets = new TelemetryBucket[Capacity];
         internal readonly FrameWindow Frames = new FrameWindow();
-        internal readonly long[] Observed = new long[7], Timed = new long[7], Skipped = new long[7], Ticks = new long[7], MaxTicks = new long[7];
+        internal readonly long[] Observed = new long[7], Timed = new long[7], CompletedTimings = new long[7], Skipped = new long[7], Ticks = new long[7], MaxTicks = new long[7];
+        internal long Generation, CrossWindowTimings;
         internal int Count;
         internal long PublishedTicks;
         internal bool LifecycleAvailable = false, CorpseEventsAvailable = false;
@@ -85,6 +98,7 @@ namespace ExpandedHordes
         internal double StartMs, EndMs;
         internal void Reset(double now)
         {
+            Generation++; CrossWindowTimings = 0; Array.Clear(CompletedTimings, 0, CompletedTimings.Length);
             Count = MarkerCount = LostMarkerNotes = 0; Array.Clear(Markers, 0, Markers.Length);
             Metadata = null; HasHorde = false; Frames.Reset(); StartMs = EndMs = now;
             ManagedBytes = -1; Gc0 = Gc1 = Gc2 = 0;
@@ -107,7 +121,7 @@ namespace ExpandedHordes
         internal long HordeSummarySequence;
         internal long LostHordeSummaries;
         internal long DroppedBatches, DroppedBuckets;
-        internal int PeakAlive, PeakCorpses;
+        internal int PeakAlive = -1, PeakCorpses = -1;
         private bool baselineKnown;
         private long aliveBaseline;
         internal double SampledBelowTargetMs;
@@ -117,6 +131,7 @@ namespace ExpandedHordes
         internal TelemetryCollector(double now, TelemetryBatch batch)
         {
             Batch = batch; batch.Reset(now); lastFrameMs = now; NewBucket(now);
+            Latest.State = PopulationSample.Unavailable;
         }
         private void NewBucket(double now)
         {
@@ -160,7 +175,7 @@ namespace ExpandedHordes
             if (ms > 33.3) bucket.Slow33++;
             if (ms > 50) bucket.Slow50++;
             Batch.Frames.Add(ms); SessionFrames.Add(ms);
-            if (Horde.Id >= 0) Horde.Frames.Add(ms);
+            if (Horde.Id >= 0) Horde.Frame(now, ms);
         }
         internal void ObserveHorde(int id, double now)
         {
@@ -209,11 +224,6 @@ namespace ExpandedHordes
             Batch.ReconciliationAvailable = baselineKnown && Latest.State.Alive >= 0;
             Batch.ReconciliationDelta = Latest.State.Alive - (aliveBaseline + Totals[0] + Totals[1] - Totals[2] - Totals[3]);
             Batch.SampledBelowTargetMs = SampledBelowTargetMs;
-            if (Horde.Id >= 0 && Batch.Frames.Mean > 0 && now - Batch.StartMs >= 15000)
-            {
-                Horde.WorstWindowFps = Math.Min(Horde.WorstWindowFps, 1000 / Batch.Frames.Mean);
-                Horde.PeakManaged = Math.Max(Horde.PeakManaged, Batch.ManagedBytes);
-            }
             if (HasPendingHorde) { pendingHorde.CopyTo(Batch.Horde); Batch.HasHorde = true; }
             Batch.LostHordeSummaries = LostHordeSummaries;
         }
@@ -226,6 +236,27 @@ namespace ExpandedHordes
             }
             else HasPendingHorde = false;
             Batch = next; Batch.Reset(now);
+        }
+    }
+
+    // A game callback may unload a scene or publish a batch before its finalizer.
+    // Never write that completion into an unrelated or already writer-owned window.
+    internal readonly struct TimingSample
+    {
+        private readonly TelemetryBatch owner;
+        private readonly long generation, started;
+        private readonly int section;
+        internal bool Active => owner != null;
+        internal TimingSample(TelemetryBatch batch, int section, long timestamp)
+        { owner = batch; generation = batch.Generation; started = timestamp; this.section = section; }
+        internal void Complete(TelemetryBatch current, long timestamp)
+        {
+            if (owner == null) return;
+            if (!ReferenceEquals(owner, current) || generation != current.Generation)
+            { current.CrossWindowTimings++; return; }
+            long elapsed = Math.Max(0, timestamp - started);
+            current.CompletedTimings[section]++; current.Ticks[section] += elapsed;
+            current.MaxTicks[section] = Math.Max(current.MaxTicks[section], elapsed);
         }
     }
 

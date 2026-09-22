@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.Collections.Generic;
+using System.Reflection;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -65,6 +67,10 @@ internal static class TelemetryChecks
         check(reconcile.Batch.ReconciliationDelta == -7 && reconcile.Totals[(int)TelemetryEvent.Death] == 0, "Unexplained disappearance is a discrepancy, never invented kills");
         for (int i = 1; i <= 17; i++) reconcile.Mark(i, 300, "phase");
         check(reconcile.Batch.MarkerCount == 16 && reconcile.Batch.LostMarkerNotes == 1 && reconcile.Batch.Markers[0].Id == 1, "Marker notes are bounded with visible loss");
+        TestHordeWindows(check);
+        TestTimingCompletion(check);
+        TestAccessorsAndTransitions(check);
+        TestHud(check);
         TestWriter(check);
         state.Alive = 1000;
         Benchmark(check, state, 100); Benchmark(check, state, 1000);
@@ -75,6 +81,136 @@ internal static class TelemetryChecks
         check(bufferBytes < 1024 * 1024, "Collector and batch numeric buffers under 1 MiB on host runtime");
         Console.WriteLine($"HOST numeric collector/four-batch/sampler allocations: {bufferBytes} bytes; excludes writer/runtime/metadata/UI.");
         GC.KeepAlive(buffers); GC.KeepAlive(collectorBuffers); GC.KeepAlive(samplerBuffers);
+    }
+
+    private static void TestHordeWindows(Action<bool, string> check)
+    {
+        var c = new TelemetryCollector(0, new TelemetryBatch());
+        var state = PopulationSample.Unavailable; state.Alive = 5; state.Corpses = 9;
+        c.ObserveHorde(1, 0);
+        for (int i = 1; i <= 150; i++)
+        {
+            c.Frame(i * 100); c.CloseBucket(i * 100, state);
+            if (i == 50 || i == 100)
+            {
+                c.SnapshotHorde(i * 100, WindowEnd.SpawningStopped);
+                c.Complete(i * 100, WindowEnd.Pause); c.Next(new TelemetryBatch(), i * 100);
+            }
+        }
+        c.EndHorde(15000, WindowEnd.Shutdown); c.Complete(15000, WindowEnd.Shutdown);
+        check(c.Batch.Horde.WorstWindowFps == 10,
+            "Horde worst 15-second FPS survives partial publications and includes final completed interval");
+        check(c.Batch.Horde.Frames.Count == 150 && c.Batch.Horde.Frames.Total == 15000,
+            "Horde mean uses all frames independently of batch boundaries");
+        c.Next(new TelemetryBatch(), 15000); c.ObserveHorde(2, 15000);
+        c.Frame(15010); c.CloseBucket(15010, state); c.EndHorde(15010, WindowEnd.SceneUnload); c.Complete(15010, WindowEnd.SceneUnload);
+        check(double.IsPositiveInfinity(c.Batch.Horde.WorstWindowFps),
+            "Short new horde cannot inherit prior horde's completed-window FPS");
+    }
+
+    private static void TestTimingCompletion(Action<bool, string> check)
+    {
+        var batch = new TelemetryBatch(); batch.Reset(0);
+        var outer = new TimingSample(batch, 0, 0);
+        var inner = new TimingSample(batch, 1, 5);
+        try { throw new InvalidOperationException("Simulated original-method exception"); }
+        catch (InvalidOperationException) { }
+        finally { inner.Complete(batch, 15); outer.Complete(batch, 40); }
+        check(batch.CompletedTimings[0] == 1 && batch.CompletedTimings[1] == 1 && batch.Ticks[0] == 40 && batch.Ticks[1] == 10,
+            "Nested timing completion retains separate inclusive sections across exceptions, including timestamp zero");
+        var crossing = new TimingSample(batch, 0, 50);
+        var next = new TelemetryBatch(); next.Reset(100);
+        crossing.Complete(next, 110);
+        check(next.CrossWindowTimings == 1 && next.CompletedTimings[0] == 0 && next.Ticks[0] == 0 && batch.Ticks[0] == 40,
+            "Completion after publication cannot mutate writer-owned data or charge a new window");
+        batch.Reset(200); crossing.Complete(batch, 210);
+        check(batch.CrossWindowTimings == 1 && batch.CompletedTimings[0] == 0,
+            "Reused or dropped buffer generation rejects a stale completion");
+        default(TimingSample).Complete(batch, 300);
+        check(batch.CrossWindowTimings == 1 && batch.Ticks[0] == 0,
+            "Disabled or unselected timing sample performs no bookkeeping");
+        var warmed = new TimingSample(batch, 0, 300); warmed.Complete(batch, 310);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 1000; i++) new TimingSample(batch, 0, i).Complete(batch, i + 1);
+        check(GC.GetAllocatedBytesForCurrentThread() == before, "Timing sample capture/completion allocates zero bytes after warm-up");
+    }
+
+    private sealed class PopulationFixture
+    {
+        internal Dictionary<int, object> Living;
+        internal List<object> Unsupported = new List<object>();
+    }
+    private static void TestAccessorsAndTransitions(Action<bool, string> check)
+    {
+        var fixture = new PopulationFixture();
+        var field = typeof(PopulationFixture).GetField(nameof(PopulationFixture.Living), BindingFlags.Instance | BindingFlags.NonPublic);
+        var count = TelemetryAccessors.DictionaryCount<PopulationFixture>(field);
+        check(count != null && count(fixture) == -1, "Uninitialized dictionary is unavailable, not an exception or zero");
+        check(TelemetryAccessors.DictionaryCount<PopulationFixture>(null) == null &&
+            TelemetryAccessors.DictionaryCount<PopulationFixture>(typeof(PopulationFixture).GetField(nameof(PopulationFixture.Unsupported), BindingFlags.Instance | BindingFlags.NonPublic)) == null,
+            "Missing/wrong collection access fails independently without an enumeration fallback");
+        fixture.Living = new Dictionary<int, object>();
+        check(count(fixture) == 0, "Known empty dictionary is distinct from unavailable");
+        var entity = new object();
+        var collector = new TelemetryCollector(0, new TelemetryBatch());
+        void Register(bool succeeds, bool restored)
+        {
+            bool before = fixture.Living.ContainsKey(1);
+            if (succeeds) fixture.Living[1] = entity;
+            var e = LifecycleObservation.Registration(before, fixture.Living.ContainsKey(1), restored);
+            if (e != TelemetryEvent.Count) collector.Record(e);
+        }
+        void Remove(bool succeeds, bool dead)
+        {
+            bool before = fixture.Living.ContainsKey(1);
+            if (succeeds) fixture.Living.Remove(1);
+            var e = LifecycleObservation.Removal(before, fixture.Living.ContainsKey(1), dead);
+            if (e != TelemetryEvent.Count) collector.Record(e);
+        }
+        Register(false, false); Register(true, true); Register(true, true); Remove(false, true);
+        check(collector.Totals[0] == 0 && collector.Totals[1] == 1 && collector.Totals[2] == 0 && count(fixture) == 1,
+            "Failed attempts, duplicate restoration and failed removal produce no invented lifecycle counts");
+        Remove(true, true); Remove(true, true); Register(true, false); Remove(true, false);
+        check(collector.Totals[0] == 1 && collector.Totals[1] == 1 && collector.Totals[2] == 1 && collector.Totals[3] == 1 && count(fixture) == 0,
+            "Reused identity can register again; duplicate death is ignored and live pool return is other removal");
+        fixture.Living = null;
+        check(count(fixture) == -1, "Collection disposal returns unavailable without disabling the accessor");
+        fixture.Living = new Dictionary<int, object> { [2] = entity, [3] = entity };
+        check(count(fixture) == 2, "Typed accessor follows replacement collection after load");
+        long beforeBytes = GC.GetAllocatedBytesForCurrentThread(); int total = 0;
+        for (int i = 0; i < 1000; i++) total += count(fixture);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - beforeBytes;
+        check(total == 2000 && allocated == 0, "Warmed typed dictionary reads allocate zero bytes on host .NET");
+    }
+
+    private static void TestHud(Action<bool, string> check)
+    {
+        var c = new TelemetryCollector(0, new TelemetryBatch()); var hud = new TelemetryHud();
+        string initial = hud.Format(c, null, 0, 0, 0);
+        check(initial.Contains("Frame window unavailable") && initial.Contains("Alive unavailable/unavailable peak unavailable"),
+            "HUD startup cannot display unsampled population or empty histogram as authoritative zero");
+        check(initial.Contains("Placement failures/calls unavailable/unavailable") && initial.Contains("CPU/GPU delayed window ms unavailable/unavailable"),
+            "HUD distinguishes unsupported hooks and absent timing samples from measured zeros");
+        var state = PopulationSample.Unavailable;
+        state.SpawningKnown = true; state.Spawning = false; state.Alive = 10;
+        c.Record(TelemetryEvent.Fresh); c.Frame(100); c.CloseBucket(100, state); c.Complete(100, WindowEnd.Cadence);
+        c.Batch.CpuSamples = 2; c.Batch.CpuTotal = 10;
+        hud.LifecycleAvailable = true; hud.PlacementAvailable = true; hud.CorpseEventsAvailable = false;
+        hud.Detailed = false; hud.ManagedBytes = 1048576; hud.ManagedReadMs = 100;
+        hud.CaptureWindow(c.Batch); c.Next(new TelemetryBatch(), 100);
+        string text = hud.Format(c, null, 3, 350, 2);
+        check(text.Contains("| IDLE | light") && text.Contains("Registered fresh 1") && text.Contains("Window 0.1s, age 0.25s | FPS 10"),
+            "HUD shows known idle state and labels completed aggregate duration and age");
+        check(text.Contains("CPU/GPU delayed window ms 5/unavailable | samples 2/0") && text.Contains("Managed 1 MiB, age 0.25s"),
+            "HUD preserves completed timing coverage and slow-memory value across batch reset");
+        check(text.Contains("Placement failures/calls 0/0") && text.Contains("adds/removes unavailable/unavailable") && text.Contains("marker 3"),
+            "HUD displays measured zero only for available hooks and keeps marker identity");
+        hud.Format(c, null, 3, 350, 2);
+        long before = GC.GetAllocatedBytesForCurrentThread(), started = Stopwatch.GetTimestamp();
+        for (int i = 0; i < 100; i++) text = hud.Format(c, null, 3, 350, 2);
+        long elapsed = Stopwatch.GetTimestamp() - started, allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Console.WriteLine($"HOST HUD text formatter: {allocated / 100d:0.###} bytes/refresh; mean={elapsed * 1000000d / Stopwatch.Frequency / 100:0.###} us/refresh; excludes Unity GUIContent/style/draw and game adapters.");
+        GC.KeepAlive(text);
     }
 
     private sealed class BlockedSink : ITelemetrySink
@@ -105,10 +241,12 @@ internal static class TelemetryChecks
         check(Stopwatch.GetElapsedTime(start).TotalMilliseconds < 100, "Blocked disk cannot block producer");
         next.Sequence = 40; sink.Release.Set();
         check(writer.Stop(2000) && sink.Count == 3 && sink.FirstSequence == 1, "Queued buffer ownership and orderly drain");
+        check(writer.Stop(2000), "Completed writer shutdown is idempotent");
         var failure = new BlockedSink(true); var failing = new TelemetryWriter(failure);
         failing.TryPublish(failing.Initial, out _); check(failure.Entered.Wait(2000), "Failure sink reached");
         failure.Release.Set();
         check(!failing.Stop(2000) && failing.Failed && failing.FailedBatches == 1, "Writer failure contained and reported");
+        check(!failing.Stop(2000) && failing.Unwritten == 1, "Repeated failed shutdown preserves unsaved-data status");
         var stalled = new BlockedSink(); var stalledWriter = new TelemetryWriter(stalled);
         stalledWriter.TryPublish(stalledWriter.Initial, out _); check(stalled.Entered.Wait(2000), "Shutdown stall reached");
         check(!stalledWriter.Stop(1) && stalledWriter.Unwritten == 1, "Shutdown wait is bounded and retains owned buffers");
@@ -118,6 +256,12 @@ internal static class TelemetryChecks
         Directory.CreateDirectory(dir);
         try
         {
+            string blockedPath = Path.Combine(dir, "not-a-directory");
+            File.WriteAllText(blockedPath, "sentinel");
+            var deniedWriter = new TelemetryWriter(new TelemetryFileSink(blockedPath, "unwritable", "test"));
+            check(deniedWriter.TryPublish(deniedWriter.Initial, out _), "Unwritable report path is handled by worker after handoff");
+            check(!deniedWriter.Stop(2000) && deniedWriter.Failed && deniedWriter.Unwritten == 1 &&
+                File.ReadAllText(blockedPath) == "sentinel", "Real file-system failure preserves caller file and reports unsaved batch");
             var collector = new TelemetryCollector(0, new TelemetryBatch());
             collector.Record(TelemetryEvent.Fresh); collector.Frame(327); collector.CloseBucket(327, PopulationSample.Unavailable); collector.Complete(327, WindowEnd.Shutdown);
             collector.Batch.LifecycleAvailable = true;

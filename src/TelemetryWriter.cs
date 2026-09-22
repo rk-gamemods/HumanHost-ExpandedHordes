@@ -20,6 +20,7 @@ namespace ExpandedHordes
         private readonly AutoResetEvent wake = new AutoResetEvent(false);
         private readonly Thread thread;
         private volatile bool stopping, failed;
+        private bool joined;
         private long written, failedBatches, maxLagTicks;
         private long accepted;
         internal long Unwritten => Interlocked.Read(ref accepted) - Written;
@@ -78,8 +79,10 @@ namespace ExpandedHordes
         }
         internal bool Stop(int milliseconds)
         {
+            // The producer owns Stop, including retries after a bounded timeout.
+            if (joined) return !failed;
             stopping = true; wake.Set();
-            bool joined = thread.Join(milliseconds);
+            joined = thread.Join(milliseconds);
             // A timed-out worker retains its buffers and handle; it may still be writing.
             // Never reclaim those objects on the Unity thread.
             if (joined) wake.Dispose();
@@ -196,8 +199,9 @@ namespace ExpandedHordes
             log.WriteLine(row.ToString());
             for (int i = 0; i < 7; i++)
                 if (b.Observed[i] != 0)
-                    log.WriteLine(string.Format(Inv, "detail section={0} observed={1} timed={2} cap_skipped={3} sampled_inclusive_ms={4:0.###} sampled_max_ms={5:0.###}",
-                        i, b.Observed[i], b.Timed[i], b.Skipped[i], b.Ticks[i] * 1000d / Stopwatch.Frequency, b.MaxTicks[i] * 1000d / Stopwatch.Frequency));
+                    log.WriteLine(string.Format(Inv, "detail section={0} observed={1} timed={2} cap_skipped={3} sampled_inclusive_ms={4:0.###} sampled_max_ms={5:0.###} completed={6}",
+                        i, b.Observed[i], b.Timed[i], b.Skipped[i], b.Ticks[i] * 1000d / Stopwatch.Frequency, b.MaxTicks[i] * 1000d / Stopwatch.Frequency, b.CompletedTimings[i]));
+            log.WriteLine("detail_cross_window_completions_discarded=" + b.CrossWindowTimings);
             if (b.HasHorde)
             {
                 var h = b.Horde;

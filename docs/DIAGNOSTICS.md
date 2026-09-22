@@ -4,6 +4,8 @@ This implementation works toward [issue #1](https://github.com/rk-gamemods/Human
 The code builds and its pure/native-metadata checks pass. Unity execution and
 the issue's end-to-end performance acceptance remain unverified. Keep the issue
 open until the runtime checklist and gaps below are resolved.
+The [acceptance audit](ISSUE-1-ACCEPTANCE.md) also tracks unfinished requirements
+that can be resolved before play-testing.
 
 ## Using it
 
@@ -92,7 +94,7 @@ Runtime detour behavior still needs an actual game session.
 | Frames | Every rendered-frame monotonic delta; count/sum/max, thresholds >16.7/33.3/50 ms. | All valid frames; histogram 2,048 bins at 0.25 ms plus overflow. Upper-bin p95/p99, `out_of_range` above 512 ms. |
 | CPU/GPU | Unity `FrameTimingManager`, polled at most 5 Hz; duplicate source timestamps rejected. | Delayed window averages and counts. Last raw source timestamp and read time exported; clock domains are not aligned. |
 | Memory/GC | `GC.GetTotalMemory(false)` and generation 0/1/2 collection counts at 1 Hz. | Managed heap only; no forced collection. Hardware RAM/GPU fields are capacity, not utilization. |
-| Method timings | About 1/32 calls per section with rotating phase and 14 timings per section per bucket (98 total). | Observed/timed/cap-skipped calls, sampled inclusive elapsed/max. No extrapolation or sum across nested sections. |
+| Method timings | About 1/32 calls per section with rotating phase and 14 timings per section per bucket (98 total). | Observed/selected/completed/cap-skipped calls, sampled inclusive elapsed/max. Cross-window completions are discarded and counted; they cannot mutate a writer-owned batch. No extrapolation or sum across nested sections. |
 | Quality | Missing fields, rejected off-main-thread events, sample gaps, reconciliation, writer lag/failures/loss. | Numeric loss is disclosed; unsupported hooks do not become authoritative zeros. |
 
 Hook paths use numeric bookkeeping and existing membership dictionaries. No
@@ -108,7 +110,11 @@ budget exhaustion, all enemies dead, or a player victory. Survivors can continue
 contributing to the same observation afterward. Do not sum repeated cumulative
 snapshots. Partial windows spanning horde transitions can mix states; raw bucket
 state is sampled at its end. Horde histograms track frames throughout the
-observation; the worst completed window FPS can include a transition window.
+observation. Worst completed window FPS uses the horde's own nominal 15-second
+frame intervals, independent of partial file publications. Full spanning frames
+are retained; a short observation with no full interval reports unavailable.
+Timing finalizers that finish after a publication do not contribute duration to
+either window. Selected and completed counts expose that incomplete coverage.
 
 ## CSV schema 1
 
@@ -151,7 +157,7 @@ phase coverage, queue saturation, I/O failure, bounded shutdown and real CSV
 rotation/readback under a non-English culture.
 
 On 2026-09-22, an AMD Ryzen 7 9800X3D Windows host, .NET 8 check target built with
-SDK 10.0.401, passed 334 assertions and a zero-warning plugin build against
+SDK 10.0.401, passed 359 assertions and a zero-warning plugin build against
 Unity 2022.3 / BepInEx 5.4.23.5. Representative synthetic results:
 
 | Check | Observed result |
@@ -159,9 +165,10 @@ Unity 2022.3 / BepInEx 5.4.23.5. Representative synthetic results:
 | Warmed event/frame/bucket/batch-reset loop | 0 allocated bytes on the calling host thread. |
 | 1,000 and 10,000 event callbacks/s, 2,000 simulated seconds each | Fixed memory; population inputs 1,000 living and 5,000 corpses. No game entities created. |
 | Pure `CloseBucket` timing, 10,000 retained samples | Median below 0.1 us clock resolution, p95/p99 0.1/0.1 us; observed maxima varied between runs. This excludes game adapters, histogram reset and handoff. |
-| Numeric collector, four batches and sampler | 337,456 allocated bytes; bucket layout 248 bytes on host. Excludes metadata, streams, thread/runtime and UI assets. |
-| One warmed synthetic 150-bucket serialization plus buffered flush | About 0.23 ms and 151,504 allocated bytes. The worker is not allocation-free. Filesystem timing is not a worst-case bound. |
+| Numeric collector, four batches and sampler | 338,016 allocated bytes; bucket layout 248 bytes on host. Excludes metadata, streams, thread/runtime and UI assets. |
+| One warmed synthetic 150-bucket serialization plus buffered flush | About 0.219 ms and 151,616 allocated bytes. The worker is not allocation-free. Filesystem timing is not a worst-case bound. |
 | Same synthetic batch CSV + summary | About 20 KB per batch, roughly 4.9 MB/hour at 240 batches/hour. Manifests/horde snapshots are extra; final workload values change row sizes. |
+| Warmed HUD text formatting, 100 refreshes | 3,184 allocated bytes/refresh; mean 2.488 us/refresh on host .NET. Excludes Unity content/style/draw, game adapters and engine effects. HUD mode is not allocation-free. |
 
 The [captured host output](diagnostics-host-checks-2026-09-22.txt) records that run;
 the check program prints fresh values. These observations do **not** establish

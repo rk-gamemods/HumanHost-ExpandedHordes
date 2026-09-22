@@ -48,16 +48,14 @@ namespace ExpandedHordes
         }
         private static Func<T, int> Count<T>(string name)
         {
-            try
-            {
-                var f = AccessTools.Field(typeof(T), name);
-                if (!f.FieldType.IsGenericType || f.FieldType.GetGenericTypeDefinition() != typeof(Dictionary<,>)) return null;
-                var p = Expression.Parameter(typeof(T));
-                return Expression.Lambda<Func<T, int>>(Expression.Property(Expression.Field(p, f), "Count"), p).Compile();
-            }
+            try { return TelemetryAccessors.DictionaryCount<T>(AccessTools.Field(typeof(T), name)); }
             catch { return null; }
         }
-        internal static bool Contains(NPC_Horde_Mgr owner, GameObject entity) => alive != null && alive(owner).ContainsKey(entity);
+        internal static bool Contains(NPC_Horde_Mgr owner, GameObject entity)
+        {
+            var members = alive?.Invoke(owner);
+            return members != null && !ReferenceEquals(entity, null) && members.ContainsKey(entity);
+        }
         internal static int HordeId
         {
             get { var mgr = horde?.Invoke(); int id = mgr && save != null ? save(mgr)?.spawnedWaveCount ?? -1 : -1; return id > 0 ? id : -1; }
@@ -97,9 +95,12 @@ namespace ExpandedHordes
         { __state = PerformanceMonitor.OnMain && !GameTelemetry.Contains(__instance, npcObj); }
         private static void Postfix(NPC_Horde_Mgr __instance, GameObject npcObj, NPC_Horde_Mgr.Horde_NPC_Info npcInfo, bool __state)
         {
-            if (!__state || !GameTelemetry.Contains(__instance, npcObj)) return;
+            if (!__state) return;
+            var transition = LifecycleObservation.Registration(false,
+                GameTelemetry.Contains(__instance, npcObj), GameTelemetry.RestoreDepth > 0);
+            if (transition == TelemetryEvent.Count) return;
             PerformanceMonitor.ObserveRegisteredHorde();
-            PerformanceMonitor.Record(GameTelemetry.RestoreDepth > 0 ? TelemetryEvent.Restored : TelemetryEvent.Fresh);
+            PerformanceMonitor.Record(transition);
             if (GameTelemetry.RestoreDepth == 0)
             {
                 var kind = CreatureCatalog.Classify(false, npcInfo);
@@ -115,8 +116,10 @@ namespace ExpandedHordes
         { __state = PerformanceMonitor.OnMain && GameTelemetry.Contains(__instance, npcObj); }
         private static void Postfix(NPC_Horde_Mgr __instance, GameObject npcObj, bool __state)
         {
-            if (__state && !GameTelemetry.Contains(__instance, npcObj))
-                PerformanceMonitor.Record(GameTelemetry.DeathDepth > 0 ? TelemetryEvent.Death : TelemetryEvent.OtherRemoval);
+            if (!__state) return;
+            var transition = LifecycleObservation.Removal(true,
+                GameTelemetry.Contains(__instance, npcObj), GameTelemetry.DeathDepth > 0);
+            if (transition != TelemetryEvent.Count) PerformanceMonitor.Record(transition);
         }
     }
     [HarmonyPatch(typeof(NPC_Horde_Mgr), "Restore_Horde_NPCs")]

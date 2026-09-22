@@ -1,6 +1,7 @@
+HOST HUD text formatter: 3184 bytes/refresh; mean=2.488 us/refresh; excludes Unity GUIContent/style/draw and game adapters.
 OUTPUT: bucket row UTF8 bytes=104; projected 10 Hz bytes/hour=3744000; struct bytes=248
-HOST warmed 150-bucket formatter + buffered flush: 0.220 ms; allocations=151504 bytes; output=20214 bytes/batch; extrapolated=4851360 bytes/hour (synthetic workload, excludes manifests/horde snapshots).
-HOST .NET benchmark: 1000 event callbacks/s, 2,000 simulated seconds; bucket median/p95/p99/max us=0.000/0.100/0.100/1.200; zero-byte hot loop checked. Unity Mono/Harmony/HUD/engine/writer overhead NOT measured.
-HOST .NET benchmark: 10000 event callbacks/s, 2,000 simulated seconds; bucket median/p95/p99/max us=0.000/0.100/0.100/4.700; zero-byte hot loop checked. Unity Mono/Harmony/HUD/engine/writer overhead NOT measured.
-HOST numeric collector/four-batch/sampler allocations: 337456 bytes; excludes writer/runtime/metadata/UI.
-PASS: 334 policy and installed-assembly contract assertions. Unity runtime behavior is not tested here.
+HOST warmed 150-bucket formatter + buffered flush: 0.219 ms; allocations=151616 bytes; output=20259 bytes/batch; extrapolated=4862160 bytes/hour (synthetic workload, excludes manifests/horde snapshots).
+HOST .NET benchmark: 1000 event callbacks/s, 2,000 simulated seconds; bucket median/p95/p99/max us=0.000/0.100/0.100/0.100; zero-byte hot loop checked. Unity Mono/Harmony/HUD/engine/writer overhead NOT measured.
+HOST .NET benchmark: 10000 event callbacks/s, 2,000 simulated seconds; bucket median/p95/p99/max us=0.000/0.100/0.100/0.100; zero-byte hot loop checked. Unity Mono/Harmony/HUD/engine/writer overhead NOT measured.
+HOST numeric collector/four-batch/sampler allocations: 338016 bytes; excludes writer/runtime/metadata/UI.
+PASS: 359 policy and installed-assembly contract assertions. Unity runtime behavior is not tested here.
