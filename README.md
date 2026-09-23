@@ -86,11 +86,10 @@ The two gates default to region 11, the second cycle of ten biome regions as
 you move outward. Set a gate to 1 to allow those extras near the starting area.
 Returning inward closes the extra chances again. Saved survivors keep their type.
 
-At horde start, a one-time silent lure also tries to draw nearby zombies toward
-you. It acts like a noise at your position and another above you to help reach
-past obstacles. You hear no sound. It only reaches zombies already loaded nearby;
-it does not create distant enemies or load more of the map. Walls and normal
-pursuit rules can still prevent a response.
+At horde start, the mod automatically tries to draw nearby zombies toward you.
+**Attraction Range** controls how far the lure reaches. It makes no audible sound
+and only attracts zombies already nearby. Walls and normal pursuit rules can
+still prevent a response.
 
 ### More bodies left behind
 
@@ -127,8 +126,7 @@ with Debug Mode off; detailed timings require profiling.
 | Extra Boss Zombie Percentage | 5% | 0-40%, including fractions |
 | Large Zombie Living Limit | 5 | 0-500; 0 means unlimited extra additions |
 | Boss Zombie Living Limit | 1 | 0-500; 0 means unlimited extra additions |
-| Elevated Sound Height | 100 m | 0-100 m |
-| Hearing Radius | 250 m | 1-250 m |
+| Attraction Range | 250 m | 1-250 m |
 | Retained Corpse Limit | 300 | 1-5,000 |
 | Debug Mode | Off | On / Off |
 | Performance Profiling | Off | On / Off |

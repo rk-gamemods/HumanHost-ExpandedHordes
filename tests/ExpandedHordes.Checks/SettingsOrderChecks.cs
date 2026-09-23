@@ -10,7 +10,7 @@ internal static class SettingsOrderChecks
         string source = header +
             "[Future First]\n# future first metadata\nZ = a=b\n\n" +
             "[Diagnostics]\n\n# type bool\nPerformance Profiling = true\n\n## debug description\n# Default value: false\nDebug Mode = false\n\n" +
-            "[Attraction]\n# height comment\nElevated Sound Height = 35.25\n\n; radius comment\nHearing Radius = 249.5\n\n" +
+            "[Attraction]\n# unknown comment\nUnknown Attraction Option = 35.25\n\n; radius comment\nAttraction Range = 249.5\n\n" +
             "[Population]\n## Unknown A\nUnknown A = keep\n\n## total description\n# Acceptable value range: From 1 to 50000\nTotal Spawn Budget = 1234\n\n" +
             "## allowance description\nShared AI Allowance = 200\n\n## living description\nLiving Horde Target = 123\n\n## Unknown B\nUnknown B = also keep\n# section footer\n\n" +
             "[Corpses]\nRetained Corpse Limit = 300\n\n" +
@@ -30,12 +30,12 @@ internal static class SettingsOrderChecks
             "Boss Zombie Living Limit = 2", "Extra Boss Zombie Percentage = 0.25", "Extra Boss Zombie Begin Biome = 17");
         Ordered(check, sorted, "Resistance follows regular, large, boss",
             "Regular Zombie Resistance = 11", "Large Zombie Resistance = 22", "Boss Resistance = 33");
-        Ordered(check, sorted, "Attraction shows radius before height", "Hearing Radius = 249.5", "Elevated Sound Height = 35.25");
+        Ordered(check, sorted, "Attraction shows range before unknown options", "Attraction Range = 249.5", "Unknown Attraction Option = 35.25");
         Ordered(check, sorted, "Diagnostics starts with debug before profiling", "Debug Mode = false", "Performance Profiling = true");
         check(sorted.Contains("## total description\n# Acceptable value range: From 1 to 50000\nTotal Spawn Budget = 1234") &&
             sorted.Contains("## living description\nLiving Horde Target = 123") &&
             sorted.Contains("## debug description\n# Default value: false\nDebug Mode = false") &&
-            sorted.Contains("; radius comment\nHearing Radius = 249.5"), "Descriptions, type/range metadata and user comments move with their exact values");
+            sorted.Contains("; radius comment\nAttraction Range = 249.5"), "Descriptions, type/range metadata and user comments move with their exact values");
         check(sorted.Contains("Unknown B = also keep\n# section footer\n\n[Composition]") &&
             sorted.Contains("[Future First]\n# future first metadata\nZ = a=b\n\n[Future Second]"),
             "Unknown section contents, embedded equals and trailing section comments are preserved");

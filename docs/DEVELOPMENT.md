@@ -45,7 +45,11 @@ Unknown entries remain intact, and malformed files are left unchanged.
   warning; native selection continues. `_inAsyncSpawnNPC` and a scoped guard
   prevent overlapping extra selections during native spawn construction.
 - `NPC_Horde_Mgr.StartHordeEvent` and `AI_Agen_Mgr.Broadcast_Sound_Played` drive
-  the paired one-time lure using the game's existing sound response.
+  the paired one-time lure using the game's existing sound response. Both normal
+  and elevated attempts run automatically; the elevated offset is fixed at 100 m.
+  `Attraction Range` is the only attraction setting. Migration preserves the old
+  `Hearing Radius` value unless `Attraction Range` already exists, and removes the
+  obsolete `Elevated Sound Height` entry.
 - The debug shortcut calls `NPC_Horde_Mgr.Try_Get_Spawn_Context` before requesting
   `StartHordeEvent(false)`. During daytime it calls
   `Enviro.EnviroTimeModule.SetTimeOfDay(19f)` and waits for

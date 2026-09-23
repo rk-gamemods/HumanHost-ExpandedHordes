@@ -28,7 +28,7 @@ namespace ExpandedHordes
             b.AppendLine("run_speed_percent=" + ModSettings.RunSpeedPercent.Value + " resistance_regular/large/boss=" + ModSettings.RegularResistance.Value + "/" + ModSettings.LargeResistance.Value + "/" + ModSettings.BossResistance.Value);
             b.AppendLine("large_begin/percent=" + ModSettings.LargeBegin.Value + "/" + ModSettings.LargePercent.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) + " boss_begin/percent=" + ModSettings.BossBegin.Value + "/" + ModSettings.BossPercent.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
             b.AppendLine("scripted_special_living_limits large/boss=" + ModSettings.LargeLimit.Value + "/" + ModSettings.BossLimit.Value + "; 0=unlimited; native/restored horde members count; native choices unchanged");
-            b.AppendLine("attraction_height/radius=" + ModSettings.AttractionHeight.Value + "/" + ModSettings.AttractionRadius.Value + " hud_x/y/scale=" + ModSettings.HudX.Value + "/" + ModSettings.HudY.Value + "/" + ModSettings.HudScale.Value);
+            b.AppendLine("attraction_height/radius=" + HordeAttraction.ElevatedLureHeight + "/" + ModSettings.AttractionRadius.Value + " hud_x/y/scale=" + ModSettings.HudX.Value + "/" + ModSettings.HudY.Value + "/" + ModSettings.HudScale.Value);
             if (G_Save._config != null) b.AppendLine("native_horde_quantity_factor=" + G_Save._config._Horde_Z_NumF + " native_corpse_limit=" + G_Save._config._MaxCorpseCount);
             foreach (Feature feature in Enum.GetValues(typeof(Feature)))
                 if (!FeatureRuntime.Enabled(feature)) b.AppendLine("disabled_feature=" + feature);

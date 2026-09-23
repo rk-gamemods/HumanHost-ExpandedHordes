@@ -6,7 +6,7 @@ namespace ExpandedHordes
     internal static class ModSettings
     {
         internal static ConfigEntry<int> Total, Living, Allowance, LargeBegin, BossBegin, LargeLimit, BossLimit, RunSpeedPercent;
-        internal static ConfigEntry<float> AttractionHeight, AttractionRadius, LargePercent, BossPercent;
+        internal static ConfigEntry<float> AttractionRadius, LargePercent, BossPercent;
         internal static ConfigEntry<int> RegularResistance, LargeResistance, BossResistance, CorpseLimit;
         internal static ConfigEntry<bool> DebugMode, Profiling, DetailedTimings;
         internal static ConfigEntry<float> HudScale;
@@ -45,16 +45,13 @@ namespace ExpandedHordes
             CorpseLimit = BindInt(config, "Corpses", "Retained Corpse Limit", 300, 1, 5000,
                 "Dead bodies kept nearby. More bodies use more memory and lower FPS. Older bodies are removed to make room.");
 
-            AttractionRadius = config.Bind("Attraction", "Hearing Radius", 250f,
-                new ConfigDescription("How far zombies hear the horde-start lure, in metres. Only attracts zombies already nearby.", new AcceptableValueRange<float>(1f, 250f)));
-            AttractionHeight = config.Bind("Attraction", "Elevated Sound Height", 100f,
-                new ConfigDescription("Height of the extra lure above you, in metres. A higher lure reaches less ground.", new AcceptableValueRange<float>(0f, 100f)));
+            AttractionRadius = AttractionSettings.Bind(config);
 
             DebugMode = config.Bind("Diagnostics", "Debug Mode", false,
-                "Show the HUD and save test logs. Enables the Start Horde hotkey. Restart after turning this on.");
+                "Show the HUD and save test logs. Enables the Start Horde hotkey.");
             Profiling = config.Bind("Diagnostics", "Performance Profiling", false,
-                "Record FPS, frame times and memory use in the logs. Uses extra CPU time. Restart required.");
-            DetailedTimings = config.Bind("Diagnostics", "Detailed Method Timings", false, "Extra timing data for finding slow code. Requires Performance Profiling and uses more CPU time. Restart required.");
+                "Record FPS, frame times and memory use in the logs. Uses extra CPU time.");
+            DetailedTimings = config.Bind("Diagnostics", "Detailed Method Timings", false, "Extra timing data for finding slow code. Requires Performance Profiling and uses more CPU time.");
             StartHordeHotkey = config.Bind("Diagnostics", "Start Horde Hotkey",
                 new KeyboardShortcut(UnityEngine.KeyCode.Pause, UnityEngine.KeyCode.LeftControl, UnityEngine.KeyCode.LeftShift),
                 "Start a horde now. Requires Debug Mode. Skips daytime to 19:00 and removes survivors from the last horde. None disables the key.");
@@ -62,7 +59,7 @@ namespace ExpandedHordes
             HudX = BindInt(config, "Diagnostics", "HUD X", 20, 0, 7680, "Distance from the left edge of the screen, in pixels.");
             HudY = BindInt(config, "Diagnostics", "HUD Y", 20, 0, 4320, "Distance from the top of the screen, in pixels.");
             ReportFileMiB = BindInt(config, "Diagnostics", "Report File MiB", 5, 1, 64,
-                "Start a new log file at this size, in MiB. Keeps the latest two files per log. Restart required.");
+                "Start a new log file at this size, in MiB. Keeps the latest two files per log.");
         }
 
         private static ConfigEntry<int> BindInt(ConfigFile config, string section, string key, int value, int min, int max, string description) =>
@@ -73,7 +70,7 @@ namespace ExpandedHordes
 
         private static ConfigEntry<int> BindResistance(ConfigFile config, string key, int value) =>
             BindInt(config, "Resistance", key, value, 0, 95,
-                "Damage reduction for these horde zombies. 0% = vanilla; 50% = half damage. Stays after dawn and loading a save. Does not affect non-horde zombies.");
+                "Damage reduction for these horde zombies. 0% = vanilla; 50% = half damage. Does not affect non-horde zombies.");
 
     }
 }

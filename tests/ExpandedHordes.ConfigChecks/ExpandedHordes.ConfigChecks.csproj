@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/AttractionSettings.cs" Link="AttractionSettings.cs" />
+    <Reference Include="BepInEx" HintPath="$(BepInExCoreDir)/BepInEx.dll" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(HumanHostManagedDir)/UnityEngine.CoreModule.dll" />
+  </ItemGroup>
+</Project>
