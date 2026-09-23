@@ -158,10 +158,15 @@ Debug Mode and Performance Profiling enable nominal 100 ms telemetry buckets.
 One background writer flushes CSV and readable summaries every 15 seconds into
 `diagnostics/` beside the DLL. Debug Mode also shows a cached overlay, refreshed
 at 4 Hz, with configurable position and scale. The compact panel prioritizes
-spawning status, living horde enemies, spawn budget and average performance.
+spawning status, living horde enemies and average FPS.
 Detailed counters and individual compatibility findings stay in the reports.
-Turn Debug Mode off in mod settings to hide it. Expanded Hordes registers no
-hotkeys or in-game diagnostic commands.
+Reports split confirmed horde-enemy deaths into regular, large, boss and unknown
+types, including deaths from any cause rather than claiming player kill credit.
+Turn Debug Mode off in mod settings to hide it. While Debug Mode is enabled,
+the configurable Start Horde Now shortcut starts a new horde without waiting
+for its random start time. The HUD displays the current binding (default
+Ctrl + Shift + Pause). This advances the wave and, if needed, sets the clock
+to night; see [trigger behavior](docs/DIAGNOSTICS.md#using-it).
 Compatibility inventories refresh automatically at startup, five seconds after
 load and when observed bindings change. They check loaded BepInEx key settings
 for configured or possible overlaps, naming both owners and settings. Hardcoded,

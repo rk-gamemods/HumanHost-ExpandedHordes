@@ -2,7 +2,20 @@ using System;
 
 namespace ExpandedHordes
 {
-    internal enum TelemetryEvent { Fresh, Restored, Death, OtherRemoval, CorpseAdded, CorpseRemoved, Placement, PlacementFailed, Context, ContextFailed, Large, Boss, Count }
+    internal enum TelemetryEvent { Fresh, Restored, Death, OtherRemoval, CorpseAdded, CorpseRemoved, Placement, PlacementFailed, Context, ContextFailed, Large, Boss, DeathRegular, DeathLarge, DeathBoss, DeathUnknown, Count }
+    internal static class DeathObservation
+    {
+        internal static bool ClassificationKnown(bool identityKnown, bool catalogComplete, bool explicitlyMatched) =>
+            identityKnown && (catalogComplete || explicitlyMatched);
+        internal static TelemetryEvent Classify(bool nativeBoss, bool catalogKnown, ZombieKind kind) =>
+            nativeBoss ? TelemetryEvent.DeathBoss : !catalogKnown ? TelemetryEvent.DeathUnknown :
+            kind == ZombieKind.Boss ? TelemetryEvent.DeathBoss : kind == ZombieKind.Large ? TelemetryEvent.DeathLarge : TelemetryEvent.DeathRegular;
+        internal static TelemetryEvent Removal(bool before, bool after, bool matchingDeath, TelemetryEvent category)
+        {
+            var transition = LifecycleObservation.Removal(before, after, matchingDeath);
+            return transition == TelemetryEvent.Death ? category : transition;
+        }
+    }
     internal enum WindowEnd { Cadence, HordeChange, SceneUnload, Shutdown, Pause, Resume, SpawningStopped }
 
     internal sealed class HordeObservation
@@ -61,6 +74,7 @@ namespace ExpandedHordes
         internal double StartMs, EndMs, FrameTotalMs, FrameMaxMs;
         internal long Fresh, Restored, Deaths, OtherRemoved, CorpseAdded, CorpseRemoved;
         internal long Placement, PlacementFailed, Context, ContextFailed, Large, Boss;
+        internal long DeathRegular, DeathLarge, DeathBoss, DeathUnknown;
         internal int AliveMin, AliveMax, CorpseMin, CorpseMax, Marker;
         internal PopulationSample State;
         internal double Duration => EndMs - StartMs;
@@ -157,6 +171,15 @@ namespace ExpandedHordes
         }
         internal void Record(TelemetryEvent kind)
         {
+            // Every confirmed death has exactly one category, including callers
+            // which only know that a death occurred. Other removals never enter here.
+            if (kind == TelemetryEvent.Death) kind = TelemetryEvent.DeathUnknown;
+            if (kind >= TelemetryEvent.DeathRegular && kind <= TelemetryEvent.DeathUnknown)
+            {
+                Totals[(int)TelemetryEvent.Death]++;
+                if (Horde.Id >= 0) Horde.Events[(int)TelemetryEvent.Death]++;
+                bucket.Deaths++;
+            }
             bucketHasData = true; TouchHorde();
             Totals[(int)kind]++;
             if (Horde.Id >= 0) Horde.Events[(int)kind]++;
@@ -164,7 +187,10 @@ namespace ExpandedHordes
             {
                 case TelemetryEvent.Fresh: bucket.Fresh++; break;
                 case TelemetryEvent.Restored: bucket.Restored++; break;
-                case TelemetryEvent.Death: bucket.Deaths++; break;
+                case TelemetryEvent.DeathRegular: bucket.DeathRegular++; break;
+                case TelemetryEvent.DeathLarge: bucket.DeathLarge++; break;
+                case TelemetryEvent.DeathBoss: bucket.DeathBoss++; break;
+                case TelemetryEvent.DeathUnknown: bucket.DeathUnknown++; break;
                 case TelemetryEvent.OtherRemoval: bucket.OtherRemoved++; break;
                 case TelemetryEvent.CorpseAdded: bucket.CorpseAdded++; break;
                 case TelemetryEvent.CorpseRemoved: bucket.CorpseRemoved++; break;

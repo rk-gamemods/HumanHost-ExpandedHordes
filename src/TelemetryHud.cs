@@ -6,16 +6,19 @@ namespace ExpandedHordes
     internal sealed class HudSnapshot
     {
         internal readonly string Status, Horde, Alive, AliveTarget, Spawned, Remaining, Fps, FrameTime, WindowAge, Conflicts, Recording;
+        internal readonly string Population, FpsSummary, Hint;
         internal readonly bool Spawning, StateKnown, FrameStale, HasProgress, HasWarning, RecordingWarning;
         internal readonly float Progress;
         internal HudSnapshot(string status, string horde, string alive, string aliveTarget, string spawned, string remaining,
             string fps, string frameTime, string windowAge, string conflicts, string recording, bool spawning, bool stateKnown,
-            bool frameStale, bool hasProgress, float progress, bool hasWarning, bool recordingWarning)
+            bool frameStale, bool hasProgress, float progress, bool hasWarning, bool recordingWarning,
+            string population = "", string fpsSummary = "", string hint = "")
         {
             Status = status; Horde = horde; Alive = alive; AliveTarget = aliveTarget; Spawned = spawned; Remaining = remaining;
             Fps = fps; FrameTime = frameTime; WindowAge = windowAge; Conflicts = conflicts; Recording = recording;
             Spawning = spawning; StateKnown = stateKnown; FrameStale = frameStale; HasProgress = hasProgress;
             Progress = progress; HasWarning = hasWarning; RecordingWarning = recordingWarning;
+            Population = population; FpsSummary = fpsSummary; Hint = hint ?? "";
         }
     }
     // Pure presentation of the shared collector. Unity owns only the cached GUIContent/style.
@@ -44,7 +47,7 @@ namespace ExpandedHordes
         private static string Count(long value, bool available) => available ? N(value) : "unavailable";
         private static string Whole(long value) => value < 0 ? "?" : value.ToString(System.Globalization.CultureInfo.InvariantCulture);
         internal HudSnapshot BuildSnapshot(TelemetryCollector collector, TelemetryWriter writer, double now, long rejected,
-            int conflictCount, bool scanIncomplete)
+            int conflictCount, bool scanIncomplete, string hotkeyHint = "")
         {
             var s = collector.Latest.State;
             double age = Math.Max(0, now - endMs) / 1000d;
@@ -70,7 +73,10 @@ namespace ExpandedHordes
                     + " | " + age.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + "s ago" : "Waiting for a completed sample",
                 conflicts, recording, s.Spawning, s.SpawningKnown, stale, progress,
                 progress ? (float)Math.Max(0, Math.Min(1, (double)s.Emitted / s.Budget)) : 0,
-                conflictCount > 0 || scanIncomplete, writer == null || writer.Failed || lost || disabled);
+                conflictCount > 0 || scanIncomplete, writer == null || writer.Failed || lost || disabled,
+                Whole(s.Alive) + " / " + Whole(s.LivingTarget),
+                frames ? (1000d / mean).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " avg FPS" + (stale ? " (stale)" : "") : "FPS unavailable",
+                hotkeyHint);
         }
         internal string Format(TelemetryCollector collector, TelemetryWriter writer, double now, long rejected)
         {

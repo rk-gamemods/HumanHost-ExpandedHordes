@@ -148,6 +148,7 @@ namespace ExpandedHordes
         internal void LogError(object value) => Lines.Add(value.ToString());
     }
     internal static class Plugin { internal static TestLog Log = new TestLog(); }
+    internal static class DebugHordeTrigger { internal static string Hint = "Ctrl + Shift + Pause: Start Horde Now"; }
     internal sealed class PlacementResult { } internal sealed class ContextResult { }
     internal sealed class ObserveRegistration { } internal sealed class ObserveRemoval { }
     internal sealed class ObserveRestore { } internal sealed class ObserveDeath { }

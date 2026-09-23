@@ -197,7 +197,7 @@ namespace ExpandedHordes
             hudData.CategoryAvailable = GameTelemetry.LifecycleAvailable && FeatureRuntime.Enabled(Feature.Catalog);
             hudData.DisabledFeatures = FeatureRuntime.DisabledSummary;
             var scan = HotkeyInventory.Current;
-            hudSnapshot = hudData.BuildSnapshot(collector, writer, now, WrongThreadEvents, scan.PairCount, scan.Truncated);
+            hudSnapshot = hudData.BuildSnapshot(collector, writer, now, WrongThreadEvents, scan.PairCount, scan.Truncated, DebugHordeTrigger.Hint);
         }
         internal static void Draw()
         {

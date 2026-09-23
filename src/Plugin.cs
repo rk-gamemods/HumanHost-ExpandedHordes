@@ -18,6 +18,7 @@ namespace ExpandedHordes
         {
             Log = Logger;
             ModSettings.Bind(Config);
+            DebugHordeTrigger.Initialize(Config);
             FeatureRuntime.Install(Feature.Population, typeof(AiSetup), typeof(HordeAllowance), typeof(SpawnBudget));
             FeatureRuntime.Install(Feature.Catalog, typeof(HordeSetup));
             if (FeatureRuntime.Enabled(Feature.Catalog))
@@ -30,19 +31,20 @@ namespace ExpandedHordes
             FeatureRuntime.Install(Feature.Corpses, typeof(CorpseRetention));
             try { PerformanceMonitor.Start(Path.GetDirectoryName(Info.Location)); }
             catch (Exception ex) { Log.LogError("Diagnostics initialization failed: " + ex.GetType().Name); PerformanceMonitor.Stop(); }
-            if (PerformanceMonitor.Active) SceneManager.sceneUnloaded += OnSceneUnloaded;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
             Log.LogInfo($"Expanded Hordes {Version} loaded | game {Application.version} | base budget {ModSettings.Total.Value}, living {ModSettings.Living.Value}, shared AI {ModSettings.Allowance.Value}, run speed {ModSettings.RunSpeedPercent.Value}%; resistance regular/large/boss {ModSettings.RegularResistance.Value}/{ModSettings.LargeResistance.Value}/{ModSettings.BossResistance.Value}%; corpse target {ModSettings.CorpseLimit.Value}. Restart after configuration changes.");
         }
 
-        private void Update() => PerformanceMonitor.Update();
+        private void Update() { PerformanceMonitor.Update(); DebugHordeTrigger.Update(); }
         private void OnGUI() => PerformanceMonitor.Draw();
-        private void OnApplicationPause(bool paused) => PerformanceMonitor.Boundary(paused ? WindowEnd.Pause : WindowEnd.Resume);
-        private void OnApplicationQuit() => PerformanceMonitor.Stop();
-        private void OnSceneUnloaded(Scene scene) => PerformanceMonitor.Boundary(WindowEnd.SceneUnload);
+        private void OnApplicationPause(bool paused) { if (paused) DebugHordeTrigger.Cancel(); PerformanceMonitor.Boundary(paused ? WindowEnd.Pause : WindowEnd.Resume); }
+        private void OnApplicationQuit() { DebugHordeTrigger.Stop(); PerformanceMonitor.Stop(); }
+        private void OnSceneUnloaded(Scene scene) { DebugHordeTrigger.Cancel(); PerformanceMonitor.Boundary(WindowEnd.SceneUnload); }
 
         private void OnDestroy()
         {
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
+            DebugHordeTrigger.Stop();
             PlacementLog.Flush();
             PerformanceMonitor.Stop();
             try { PopulationOverrides.Restore(); }
