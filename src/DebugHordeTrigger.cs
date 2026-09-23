@@ -24,9 +24,7 @@ namespace ExpandedHordes
 
         internal static void Initialize(ConfigFile config)
         {
-            hotkey = config.Bind("Diagnostics", "Start Horde Hotkey",
-                new KeyboardShortcut(KeyCode.Pause, KeyCode.LeftControl, KeyCode.LeftShift),
-                "Debug only: start the next horde now; daytime advances to 19:00. Clears previous horde survivors; unavailable during spawning. None disables.");
+            hotkey = ModSettings.StartHordeHotkey;
             hotkey.SettingChanged += OnHotkeyChanged;
             RefreshHint();
             try

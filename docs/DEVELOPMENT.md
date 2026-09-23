@@ -5,6 +5,13 @@ the console checks under `tests/` share the small calculation classes directly.
 Settings in `ModSettings.cs` are authoritative. This is an alpha with limited
 local play-testing.
 
+`SettingsOrder` preserves section/key identities, values and metadata while
+ordering the settings for display. `SettingsPersistence` applies it only to
+this plugin's `ConfigFile` after `Save`, under BepInEx's `_ioLock`, using an
+atomic file replacement. BepInEx sorts sections alphabetically;
+[HHMM 1.3.0 renders file order](https://github.com/xem888/HHMM/blob/cd5bfe8d7700fec5f87d26051544d19cacee6019/src/pages/ConfigEditor.tsx#L798).
+Unknown entries remain intact, and malformed files are left unchanged.
+
 | Files | Purpose |
 | --- | --- |
 | `Plugin`, `ModIdentity`, `ModSettings` | Startup, identity and configuration. |
