@@ -23,13 +23,13 @@ namespace ExpandedHordes
                 "Limits how many horde and nearby zombies react to noise. Keep this at least as high as Living Horde Target.");
 
             LargeLimit = BindInt(config, "Composition", "Large Zombie Living Limit", 5, 0, 500,
-                "Stop extra large spawns at this count. Counts large horde zombies from vanilla spawns and loaded saves. 0 = unlimited. Vanilla spawns ignore this limit.");
+                "Stops extra large zombie spawns when this many are alive in the horde. Vanilla spawns count toward the limit but aren't blocked. 0 = unlimited.");
             LargePercent = BindPercent(config, "Extra Large Zombie Percentage", 20f,
                 "Chance to add a large non-boss on each spawn. Uses the biome and living limits. Accepts 0.01% steps; 0 turns off extras.");
             LargeBegin = BindInt(config, "Composition", "Extra Large Zombie Begin Biome", 11, 1, 1000000,
                 "Biome number where extra large zombies start. Counts outward from spawn: 1 = first biome, 11 = start of the second cycle.");
             BossLimit = BindInt(config, "Composition", "Boss Zombie Living Limit", 1, 0, 500,
-                "Stop extra boss spawns at this count. Counts horde bosses from vanilla spawns and loaded saves. 0 = unlimited. Vanilla spawns ignore this limit.");
+                "Stops extra boss spawns when this many are alive in the horde. Vanilla spawns count toward the limit but aren't blocked. 0 = unlimited.");
             BossPercent = BindPercent(config, "Extra Boss Zombie Percentage", 5f,
                 "Chance to add a boss on each spawn. Uses the biome and living limits. Accepts 0.01% steps; 0 turns off extras.");
             BossBegin = BindInt(config, "Composition", "Extra Boss Zombie Begin Biome", 11, 1, 1000000,
