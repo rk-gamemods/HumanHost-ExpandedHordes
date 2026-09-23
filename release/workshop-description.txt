@@ -21,9 +21,8 @@ Make it the night you barely survive. Then decide whether the next one should be
 Higher counts come with heavy performance cost.
 
 [b]Installation[/b]
-1. Subscribe to Expanded Hordes on Steam Workshop.
-2. Open Human Host's Workshop menu, find Expanded Hordes, and click Install.
-3. Restart the game.
+1. Open Human Host's Workshop menu, find Expanded Hordes, and click Install.
+2. Restart the game.
 
 [b]Source code[/b]
 https://github.com/rk-gamemods/HumanHost-ExpandedHordes
