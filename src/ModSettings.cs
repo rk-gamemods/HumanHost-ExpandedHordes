@@ -16,7 +16,7 @@ namespace ExpandedHordes
         internal static void Bind(ConfigFile config)
         {
             Living = BindInt(config, "Population", "Living Horde Target", 75, 1, 500,
-                "Horde zombies alive at once. Keep Shared AI Allowance at least this high. Higher counts can cause stutter.");
+                "Horde zombies alive at once. Keep Shared AI Allowance at least this high. Higher counts will cause stutter and hit FPS hard.");
             Total = BindInt(config, "Population", "Total Spawn Budget", 1000, 1, 50000,
                 "Total spawns per horde, including replacements. Multiplied by the game's Horde Quantity percentage. Dawn stops spawning.");
             Allowance = BindInt(config, "Population", "Shared AI Allowance", 90, 1, 1000,
@@ -43,7 +43,7 @@ namespace ExpandedHordes
             BossResistance = BindResistance(config, "Boss Resistance", 0);
 
             CorpseLimit = BindInt(config, "Corpses", "Retained Corpse Limit", 300, 1, 5000,
-                "Settled bodies to retain, including ordinary zombies. More bodies can reduce FPS and increase memory use; normal cleanup still applies.");
+                "Dead bodies to keep, including ordinary zombies. More bodies cost FPS and memory. The game still removes old bodies.");
 
             AttractionRadius = config.Bind("Attraction", "Hearing Radius", 250f,
                 new ConfigDescription("Horde-start lure radius in metres. Attracts existing nearby zombies; does not spawn more. Height counts toward the distance.", new AcceptableValueRange<float>(1f, 250f)));
