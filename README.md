@@ -107,6 +107,11 @@ guarantee that bodies form solid, climbable piles. Removed corpses can lose loot
 
 ## Settings at a glance
 
+Settings are grouped in this order: Population, Composition, Movement,
+Resistance, Corpses, Attraction, Diagnostics. Diagnostics starts with Debug
+Mode, Performance Profiling and Detailed Method Timings. Profiling can run
+with Debug Mode off; detailed timings require profiling.
+
 | Setting | Default | Allowed range |
 | --- | ---: | --- |
 | Total Spawn Budget | 1,000 | 1-50,000 before Horde Quantity |

@@ -105,6 +105,7 @@ internal static class Program
         Check(HordeRules.Category(8000, 11, 11, 11, 40, 40) == 0, "Maximum chances leave 20 native slots");
 
         LivingSpecialChecks.Run(Check);
+        SettingsOrderChecks.Run(Check);
         TelemetryChecks.Run(Check);
         DeathCategoryChecks.Run(Check);
         DebugHordeChecks.Run(Check);

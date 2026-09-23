@@ -19,6 +19,7 @@ namespace ExpandedHordes
             Log = Logger;
             ModSettings.Bind(Config);
             DebugHordeTrigger.Initialize(Config);
+            SettingsPersistence.Initialize(Config);
             FeatureRuntime.Install(Feature.Population, typeof(AiSetup), typeof(HordeAllowance), typeof(SpawnBudget));
             FeatureRuntime.Install(Feature.Catalog, typeof(HordeSetup));
             if (FeatureRuntime.Enabled(Feature.Catalog))
