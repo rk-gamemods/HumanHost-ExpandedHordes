@@ -10,17 +10,24 @@ from the remaining runtime checks.
 
 Enable Debug Mode and Performance Profiling, then restart. Leave Detailed Method
 Timings off for ordinary tests. The overlay follows Debug Mode; turn that setting
-off to hide it. Position and scale remain configurable. Expanded Hordes has no
-diagnostic hotkeys, buttons, test markers or other in-game commands. Debug Mode
-enables reports and memory sampling; profiling also polls Unity frame timings.
+off to hide it. Position and scale remain configurable. Debug Mode enables
+reports, memory sampling and the configurable Start Horde Now shortcut;
+profiling also polls Unity frame timings.
 
-The HUD is a compact status panel, not the report transcript. It emphasizes
-spawning state, living horde enemies and their cap, spawn budget, and performance
-from the last completed measurement window. It labels the window's age because
-those FPS/frame-time values are not an instantaneous reading. "Not spawning"
-does not mean the horde is finished. Unspawned budget is not enemies left to kill.
-Compatibility findings appear as a short count; owners, settings and coverage
-details remain in the reports. Missing data is distinct from zero.
+The HUD shows spawning status, living horde enemies and their cap, average FPS,
+and the current Start Horde Now binding. FPS comes from the last completed
+measurement window; stale or missing measurements are labeled. "Not spawning"
+does not mean the horde is finished. Spawn budgets, frame-time distributions,
+compatibility findings and report health remain in the logs.
+
+With Debug Mode enabled, press the shortcut displayed in the HUD to start a
+new horde. The default is Ctrl + Shift + Pause. Rebind `Start Horde Hotkey` in the
+mod configuration if needed; the HUD reads that setting. The trigger moves
+daytime to 19:00 before starting through the native horde system, using the
+current mod settings. It advances the wave counter and schedules the next
+natural horde. Starting a new wave uses the game's normal cleanup of survivors
+from the previous wave. It rejects active spawning or an unready world and does
+nothing with Debug Mode off. Enemies still use normal spawn positions and cadence.
 
 Reports are local in `diagnostics/` beside the DLL:
 
@@ -57,7 +64,7 @@ keys with different modifiers are possible overlaps because activation behavior
 can differ. Hardcoded keys, native/Workshop controls, external tools, custom
 string settings and activation contexts are unknown. Reports explicitly label
 partial coverage and scan/report limits; no findings does not prove no conflicts.
-Expanded Hordes itself registers no shortcuts.
+The debug horde shortcut participates in this inventory like other typed bindings.
 
 Native registry investigation used Steam build 25448142. `Mod_Mgr.Categories`
 describes category metadata. `WorkshopMgr` manages Steam queries and installation.
@@ -152,9 +159,10 @@ reason and pending summary/metadata. Neither invents frames or elapsed time.
 Timing finalizers that finish after a publication do not contribute duration to
 either window. Selected and completed counts expose that incomplete coverage.
 
-## CSV schema 1
+## CSV schema 2
 
 Column names and order are defined by `TelemetryFileSink.Header`.
+Schema 2 appends death categories; older schema 1 reports cannot recover them.
 
 - `schema`, `session`, `batch`, `seq` identify the schema, session, attempted batch
   and real bucket. Gaps in sequence numbers accompany lost detail.
@@ -167,6 +175,13 @@ Column names and order are defined by `TelemetryFileSink.Header`.
 - `fresh`, `restored`, `deaths`, `other_removed`, `corpse_added`, `corpse_removed`,
   `placement`, `placement_failed`, `context`, `context_failed`, `large`, `boss`
   are bucket event deltas with the scopes in the table above.
+- `deaths_regular`, `deaths_large`, `deaths_boss`, `deaths_unknown` split
+  confirmed horde-enemy deaths by type. Their sum equals `deaths` when lifecycle
+  observation is available. Unavailable lifecycle observation is -1; a death
+  whose type cannot be established belongs to `deaths_unknown`.
+  Live pool returns, despawns and duplicate removals are excluded. These counts
+  include all causes of death and do not establish who killed an enemy.
+  Window, cumulative horde and session log summaries retain the same breakdown.
 - `marker` is a reserved legacy field and remains zero in new sessions; old
   reports may contain historical markers. `dropped_batches` and `dropped_buckets` are cumulative and
   known at publication; final unsaved data is also reported in BepInEx warnings.

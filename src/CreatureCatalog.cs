@@ -38,8 +38,9 @@ namespace ExpandedHordes
         private static AccessTools.FieldRef<NPC_Spawner_Mgr, NPC_Spawner_Mgr.NPC_Bio_Set[]> Biomes;
         internal static readonly List<Entry> Large = new List<Entry>();
         internal static readonly List<Entry> Bosses = new List<Entry>();
+        internal static bool Complete { get; private set; }
 
-        internal static void Clear() { Kinds.Clear(); Large.Clear(); Bosses.Clear(); }
+        internal static void Clear() { Kinds.Clear(); Large.Clear(); Bosses.Clear(); Complete = false; }
 
         internal static void Resolve(NPC_Spawner_Mgr manager)
         {
@@ -49,6 +50,7 @@ namespace ExpandedHordes
             Biomes ??= AccessTools.FieldRefAccess<NPC_Spawner_Mgr, NPC_Spawner_Mgr.NPC_Bio_Set[]>("NPC_Biomes");
             var biomes = Biomes(manager);
             if (biomes == null) throw new InvalidOperationException("Native creature registry has no biome data.");
+            bool complete = true;
             foreach (var definition in Definitions)
             {
                 bool added = false;
@@ -69,9 +71,14 @@ namespace ExpandedHordes
                         }
                     }
                 }
-                if (!added) FeatureRuntime.WarnOnce("roster:" + definition.GroupGuid,
-                    $"Extra creature group {definition.GroupGuid} is unavailable; skipped without replacing native choices.");
+                if (!added)
+                {
+                    complete = false;
+                    FeatureRuntime.WarnOnce("roster:" + definition.GroupGuid,
+                        $"Extra creature group {definition.GroupGuid} is unavailable; skipped without replacing native choices.");
+                }
             }
+            Complete = complete;
             FeatureRuntime.DebugLog($"Creature catalog: {Large.Count} large types, {Bosses.Count} boss types resolved.");
         }
 
@@ -79,6 +86,15 @@ namespace ExpandedHordes
         {
             Kinds.TryGetValue(new Entry(identity.biomeIndex, identity.groupIndex, identity.npcPrefabIndex), out var kind);
             return CombatRules.Classify(nativeBoss, kind);
+        }
+        // Telemetry cannot infer regular from a missing special-group lookup in
+        // an incomplete catalog. Gameplay classification remains unchanged.
+        internal static bool TryClassifyDeath(NPC_Horde_Mgr.Horde_NPC_Info identity, out ZombieKind kind)
+        {
+            kind = ZombieKind.Regular;
+            if (identity == null) return false;
+            bool matched = Kinds.TryGetValue(new Entry(identity.biomeIndex, identity.groupIndex, identity.npcPrefabIndex), out kind);
+            return DeathObservation.ClassificationKnown(true, Complete, matched);
         }
     }
 }

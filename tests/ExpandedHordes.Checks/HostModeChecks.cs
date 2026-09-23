@@ -49,6 +49,14 @@ internal static class HostModeChecks
                 check(FrameTimingManager.Captures == (mode.Item2 ? 1 : 0) && FeatureRuntime.Installed.Contains(Feature.Profiling) == detailed,
                     "Engine timings require profiling; detailed hooks require both profiling and detailed option");
                 check((GUI.Draws > 0) == mode.Item1, "Debug mode automatically shows HUD; profiling alone draws no HUD");
+                if (mode.Item1)
+                {
+                    DebugHordeTrigger.Hint = "Alt + K: Start Horde Now";
+                    Write("nextHud", 0d); PerformanceMonitor.Update();
+                    check(Read<HudSnapshot>("hudSnapshot").Hint == DebugHordeTrigger.Hint,
+                        "Production monitor refresh forwards the current configurable shortcut hint to the HUD");
+                    DebugHordeTrigger.Hint = "Ctrl + Shift + Pause: Start Horde Now";
+                }
                 int layouts = GUIStyle.Layouts; var cachedSnapshot = Read<HudSnapshot>("hudSnapshot"); var cachedRenderer = Read<TelemetryHudRenderer>("hudRenderer");
                 PerformanceMonitor.Draw();
                 check(GUIStyle.Layouts == layouts && ReferenceEquals(cachedSnapshot, Read<HudSnapshot>("hudSnapshot")) && ReferenceEquals(cachedRenderer, Read<TelemetryHudRenderer>("hudRenderer")),

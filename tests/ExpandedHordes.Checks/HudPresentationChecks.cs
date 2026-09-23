@@ -16,7 +16,8 @@ internal static class HudPresentationChecks
         public void Write(TelemetryBatch batch) { }
         public void Dispose() { }
     }
-    private static HudSnapshot Fixture(bool spawning, bool unavailable = false, double now = 27000)
+    private static HudSnapshot Fixture(bool spawning, bool unavailable = false, double now = 27000,
+        string hotkeyHint = "Ctrl + Shift + Pause: Start Horde Now")
     {
         var collector = new TelemetryCollector(0, new TelemetryBatch());
         var hud = new TelemetryHud { LifecycleAvailable = !unavailable, PlacementAvailable = !unavailable,
@@ -35,7 +36,7 @@ internal static class HudPresentationChecks
             hud.CaptureWindow(collector.Batch);
         }
         var writer = new TelemetryWriter(new PreviewSink());
-        try { return hud.BuildSnapshot(collector, writer, now, 0, unavailable ? 0 : 7, true); }
+        try { return hud.BuildSnapshot(collector, writer, now, 0, unavailable ? 0 : 7, true, hotkeyHint); }
         finally { writer.Stop(2000); }
     }
 
@@ -58,8 +59,14 @@ internal static class HudPresentationChecks
             "Stale frames are flagged and unknown spawn budgets do not render fabricated progress");
         var commands = Capture(idle);
         string text = string.Join("\n", commands.Where(c => c.Text != null).Select(c => c.Text));
-        check(commands.Any(c => c.Text == null) && commands.Count(c => c.Text != null) > 5,
-            "HUD renders structured surfaces and separately styled information rather than a raw text dump");
+        check(commands.Any(c => c.Text == null) && commands.Count(c => c.Text != null) == 6,
+            "Combat HUD has only six labels for identity, status, population, FPS, caption and hotkey");
+        check(text.Contains("Ctrl + Shift + Pause") && text.Contains("Start Horde Now") &&
+            !text.Contains("budget") && !text.Contains("p95") && !text.Contains("Reports") && !text.Contains("overlap"),
+            "Combat HUD shows the action binding and leaves detailed diagnostics in reports");
+        string rebound = string.Join(" ", Capture(Fixture(false, hotkeyHint: "Alt + K: Start Horde Now")).Select(c => c.Text));
+        check(rebound.Contains("Alt + K") && !rebound.Contains("Pause"),
+            "HUD renders a changed binding from the snapshot without a hardcoded default");
         check(!text.Contains("hotkey_configured_overlap") && !text.Contains("com.nf.") && !text.Contains("first=") &&
             !text.Contains("Registered fresh") && !text.Contains("CPU/GPU delayed") && !text.Contains("off-thread"),
             "HUD excludes raw conflict records, owner identifiers and low-level diagnostic counters");

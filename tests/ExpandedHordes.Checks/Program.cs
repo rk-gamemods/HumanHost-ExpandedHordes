@@ -105,6 +105,8 @@ internal static class Program
         Check(HordeRules.Category(80, 11, 11, 11, 40, 40) == 0, "Maximum chances leave 20 native slots");
 
         TelemetryChecks.Run(Check);
+        DeathCategoryChecks.Run(Check);
+        DebugHordeChecks.Run(Check);
         MetadataChecks.Run(Check);
         RetentionChecks.Run(Check);
         WriterResourceChecks.Run(Check);
@@ -133,6 +135,7 @@ internal static class Program
             dll.Method("NPC_Horde_Mgr", "Remove_AliveHordeNPC", "npcObj");
             dll.Method("NPC_Horde_Mgr", "Restore_Horde_NPCs");
             dll.Method("NPC_Spawner_Mgr", "Back_Dead_NPC_To_Pool", "inputNPC");
+            dll.MethodTypes("NPC_Spawner_Mgr", "Back_Dead_NPC_To_Pool", "Void", "C_Controller_Base");
             dll.Fields("NPC_Horde_Mgr", "_ins", "_aliveHordeNPCs", "_G_Info");
             dll.Fields("NPC_Horde_Mgr", "_hordeSaveData", "_HordeZombieAll", "_ZombiesPioneerCount", "_ZombiesPerWaveAdd", "_MaxAllowActiveZombies", "_corHordeSpawn");
             dll.Fields("NPC_Spawner_Mgr", "NPC_Biomes");
@@ -150,6 +153,11 @@ internal static class Program
             dll.Method("Terrain_Loader_Manager", "get_BiomesWidthDis");
         }
         using (var dll = new AssemblyContract(Path.Combine(args[0], "Global_Funcs.dll"))) dll.Fields("Global_Infos", "_totalGameMinutes");
+        using (var dll = new AssemblyContract(Path.Combine(args[0], "Enviro3.Runtime.dll")))
+        {
+            dll.Method("EnviroTimeModule", "SetTimeOfDay", "tod");
+            dll.Method("EnviroTimeModule", "GetTimeOfDay");
+        }
         using (var dll = new AssemblyContract(Path.Combine(args[0], "AI.dll")))
         {
             dll.Method("Zombie_Agent", "_Update");
@@ -173,7 +181,9 @@ internal static class Program
             dll.Method("C_Controller_Base", "Play_Anim_BaseLayer", "clip", "clipTran", "transitionTime", "speed");
             dll.Fields("C_Controller_Base", "curr_Move_F", "Pressed_FastMove", "Pressed_Move", "currCharState");
             dll.Fields("NPC_Input", "_npcSpawnSource", "_inRunning");
+            dll.FieldType("NPC_Input", "is_Boss", "Boolean");
             dll.Fields("Creature_Mgr", "_IsDayTime");
+            dll.MethodTypes("Creature_Mgr", "Is_Day_Time", "Boolean", "Single");
         }
         Console.WriteLine($"PASS: {assertions} policy and installed-assembly contract assertions. Unity runtime behavior is not tested here.");
     }
@@ -205,6 +215,14 @@ internal static class Program
         {
             var actual = Type(type).GetFields().Select(reader.GetFieldDefinition).Select(f => reader.GetString(f.Name)).ToHashSet();
             foreach (string name in names) Check(actual.Contains(name), $"Field injection: {type}.{name}");
+        }
+        internal void MethodTypes(string type, string name, string returnType, params string[] parameters)
+        {
+            var method = Type(type).GetMethods().Select(reader.GetMethodDefinition)
+                .Single(m => reader.GetString(m.Name) == name);
+            var signature = method.DecodeSignature(new TypeNames(), (object)null);
+            Check(signature.ReturnType == returnType && signature.ParameterTypes.SequenceEqual(parameters),
+                $"Installed method type contract: {type}.{name}");
         }
         internal void FieldType(string type, string name, string expected, bool isStatic = false)
         {

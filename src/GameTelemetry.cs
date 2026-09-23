@@ -21,6 +21,8 @@ namespace ExpandedHordes
         private static Func<Terrain_Loader_Manager, float> gridWidth;
         private static Func<NPC_Horde_Mgr, Dictionary<GameObject, NPC_Horde_Mgr.Horde_NPC_Info>> alive;
         internal static int RestoreDepth, DeathDepth;
+        internal static GameObject DeathEntity;
+        internal static bool DeathNativeBoss;
         internal static string Availability = "";
         internal static bool CorpseEventsAvailable, LifecycleAvailable;
         internal static bool MembershipAvailable => alive != null;
@@ -34,7 +36,8 @@ namespace ExpandedHordes
             gameInfo = Field<NPC_Horde_Mgr, Global_Infos>("_G_Info");
             terrain = Static<Terrain_Loader_Manager>(); gridWidth = Field<Terrain_Loader_Manager, float>("BigTerraWidth");
             alive = Field<NPC_Horde_Mgr, Dictionary<GameObject, NPC_Horde_Mgr.Horde_NPC_Info>>("_aliveHordeNPCs");
-            Availability = $"alive_accessor={aliveCount != null}; corpse_accessor={bodyCount != null}; save_accessor={save != null}; game_time_accessor={gameInfo != null}; player_kills=unavailable; categories=catalog_known_fresh_only; region=sampled_horde_spawn_region";
+            DeathEntity = null; DeathNativeBoss = false;
+            Availability = $"alive_accessor={aliveCount != null}; corpse_accessor={bodyCount != null}; save_accessor={save != null}; game_time_accessor={gameInfo != null}; player_kills=unavailable; categories=catalog_known_fresh_and_deaths; death_categories=regular/large/boss/unknown; deaths_not_player_attributed=true; region=sampled_horde_spawn_region";
         }
         private static Func<T> Static<T>()
         {
@@ -55,6 +58,20 @@ namespace ExpandedHordes
         {
             var members = alive?.Invoke(owner);
             return members != null && !ReferenceEquals(entity, null) && members.ContainsKey(entity);
+        }
+        internal static TelemetryEvent DeathCategory(NPC_Horde_Mgr owner, GameObject entity)
+        {
+            if (DeathNativeBoss) return TelemetryEvent.DeathBoss;
+            try
+            {
+                var members = alive?.Invoke(owner);
+                if (members == null || !members.TryGetValue(entity, out var identity) || identity == null || !FeatureRuntime.Enabled(Feature.Catalog))
+                    return TelemetryEvent.DeathUnknown;
+                // Read while membership still exists; it is gone after native removal.
+                bool known = CreatureCatalog.TryClassifyDeath(identity, out var kind);
+                return DeathObservation.Classify(false, known, kind);
+            }
+            catch { return TelemetryEvent.DeathUnknown; }
         }
         internal static int HordeId
         {
@@ -112,13 +129,20 @@ namespace ExpandedHordes
     [HarmonyPatch(typeof(NPC_Horde_Mgr), "Remove_AliveHordeNPC")]
     internal static class ObserveRemoval
     {
-        private static void Prefix(NPC_Horde_Mgr __instance, GameObject npcObj, out bool __state)
-        { __state = PerformanceMonitor.OnMain && GameTelemetry.Contains(__instance, npcObj); }
-        private static void Postfix(NPC_Horde_Mgr __instance, GameObject npcObj, bool __state)
+        internal struct State { internal bool Member, Death; internal TelemetryEvent Category; }
+        private static void Prefix(NPC_Horde_Mgr __instance, GameObject npcObj, out State __state)
         {
-            if (!__state) return;
-            var transition = LifecycleObservation.Removal(true,
-                GameTelemetry.Contains(__instance, npcObj), GameTelemetry.DeathDepth > 0);
+            __state = default;
+            if (!PerformanceMonitor.OnMain || !GameTelemetry.Contains(__instance, npcObj)) return;
+            __state.Member = true;
+            __state.Death = GameTelemetry.DeathDepth > 0 && ReferenceEquals(GameTelemetry.DeathEntity, npcObj);
+            __state.Category = __state.Death ? GameTelemetry.DeathCategory(__instance, npcObj) : TelemetryEvent.DeathUnknown;
+        }
+        private static void Postfix(NPC_Horde_Mgr __instance, GameObject npcObj, State __state)
+        {
+            if (!__state.Member) return;
+            var transition = DeathObservation.Removal(true,
+                GameTelemetry.Contains(__instance, npcObj), __state.Death, __state.Category);
             if (transition != TelemetryEvent.Count) PerformanceMonitor.Record(transition);
         }
     }
@@ -131,8 +155,25 @@ namespace ExpandedHordes
     [HarmonyPatch(typeof(NPC_Spawner_Mgr), "Back_Dead_NPC_To_Pool")]
     internal static class ObserveDeath
     {
-        private static void Prefix(out bool __state) { __state = PerformanceMonitor.OnMain; if (__state) GameTelemetry.DeathDepth++; }
-        private static Exception Finalizer(Exception __exception, bool __state) { if (__state) GameTelemetry.DeathDepth--; return __exception; }
+        internal struct State { internal bool Active, NativeBoss; internal GameObject Entity; }
+        private static void Prefix(C_Controller_Base inputNPC, out State __state)
+        {
+            __state = new State { Active = PerformanceMonitor.OnMain, Entity = GameTelemetry.DeathEntity, NativeBoss = GameTelemetry.DeathNativeBoss };
+            if (!__state.Active) return;
+            GameTelemetry.DeathDepth++;
+            GameTelemetry.DeathEntity = inputNPC ? inputNPC.gameObject : null;
+            var zombie = inputNPC as Zombie_Input;
+            GameTelemetry.DeathNativeBoss = zombie && zombie.is_Boss;
+        }
+        private static Exception Finalizer(Exception __exception, State __state)
+        {
+            if (__state.Active)
+            {
+                GameTelemetry.DeathDepth--;
+                GameTelemetry.DeathEntity = __state.Entity; GameTelemetry.DeathNativeBoss = __state.NativeBoss;
+            }
+            return __exception;
+        }
     }
     // These checked IL seams observe actual dictionary mutations, including load
     // restoration and distance hiding. They do not mean ragdoll creation or loot loss.

@@ -25,6 +25,14 @@ Settings in `ModSettings.cs` are authoritative. This is still a pre-testing alph
   spawns. Restored survivors keep their saved identities.
 - `NPC_Horde_Mgr.StartHordeEvent` and `AI_Agen_Mgr.Broadcast_Sound_Played` drive
   the paired one-time lure using the game's existing sound response.
+- The debug shortcut calls `NPC_Horde_Mgr.Try_Get_Spawn_Context` before requesting
+  `StartHordeEvent(false)`. During daytime it calls
+  `Enviro.EnviroTimeModule.SetTimeOfDay(19f)` and waits for
+  `Weather_Controller.Update` to propagate nighttime through
+  `Creature_Mgr.On_Time_Passing`. Existing nighttime is preserved.
+- Death diagnostics scope `NPC_Spawner_Mgr.Back_Dead_NPC_To_Pool` to the dying
+  entity, then classify its saved membership before `Remove_AliveHordeNPC`
+  removes it. Confirmed removal records one category and one aggregate death.
 - `C_Controller_Base.Play_Anim_BaseLayer` adjusts only the running movement
   argument while native nighttime horde spawning remains active.
 - `Char_Status.set__CurrHP` reduces requested HP loss before the game's clamp.

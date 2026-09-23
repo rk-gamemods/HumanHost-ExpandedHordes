@@ -94,7 +94,7 @@ namespace ExpandedHordes
     // and formatting happen in Write/Dispose on the persistent worker.
     internal sealed class TelemetryFileSink : ITelemetrySink
     {
-        internal const string Header = "schema,session,batch,seq,start_ms,duration_ms,frames,frame_sum_ms,frame_max_ms,gt16_7,gt33_3,gt50,missed,horde,spawning,budget,emitted,alive_sample,corpse_pool_sample,living_target,corpse_limit,fresh,restored,deaths,other_removed,corpse_added,corpse_removed,placement,placement_failed,context,context_failed,large,boss,marker,dropped_batches,dropped_buckets,game_minutes,spawn_region";
+        internal const string Header = "schema,session,batch,seq,start_ms,duration_ms,frames,frame_sum_ms,frame_max_ms,gt16_7,gt33_3,gt50,missed,horde,spawning,budget,emitted,alive_sample,corpse_pool_sample,living_target,corpse_limit,fresh,restored,deaths,other_removed,corpse_added,corpse_removed,placement,placement_failed,context,context_failed,large,boss,marker,dropped_batches,dropped_buckets,game_minutes,spawn_region,deaths_regular,deaths_large,deaths_boss,deaths_unknown";
         private readonly string directory, session, manifest;
         private readonly long limit;
         private StreamWriter csv, log;
@@ -147,7 +147,8 @@ namespace ExpandedHordes
                 if (File.Exists(path)) File.Move(path, old);
                 File.WriteAllText(path, "session=" + session + Environment.NewLine + manifest);
                 csv = Open("performance.csv", true); log = Open("diagnostics.log", false);
-                log.WriteLine("session=" + session + " schema=1; -1 means unavailable; population is sampled; timings are delayed; no causal attribution");
+                log.WriteLine("session=" + session + " schema=2; -1 means unavailable; population is sampled; timings are delayed; no causal attribution");
+                log.WriteLine("death_categories=regular/large/boss/unknown; confirmed horde enemy deaths only; not player-attributed kills; unknown includes unavailable classification");
                 log.WriteLine("retention_limit_bytes=" + limit + " retained_files_per_stream=2; older_history_discarded_on_rotation; threshold_may_be_exceeded_by_one_batch");
             }
             if (b.Metadata != null)
@@ -166,7 +167,7 @@ namespace ExpandedHordes
             for (int i = 0; i < b.Count; i++)
             {
                 var v = b.Buckets[i];
-                row.Clear(); row.Append("1,").Append(session); Field(b.Sequence); Field(v.Sequence);
+                row.Clear(); row.Append("2,").Append(session); Field(b.Sequence); Field(v.Sequence);
                 Field(v.StartMs); Field(v.Duration); Field(v.Frames); Field(v.FrameTotalMs); Field(v.FrameMaxMs);
                 Field(v.Slow17); Field(v.Slow33); Field(v.Slow50); Field(v.Missed); Field(v.State.Horde);
                 Field(!v.State.SpawningKnown ? -1 : v.State.Spawning ? 1 : 0); Field(v.State.Budget); Field(v.State.Emitted); Field(v.State.Alive); Field(v.State.Corpses);
@@ -176,6 +177,8 @@ namespace ExpandedHordes
                 Field(b.PlacementAvailable ? v.Placement : -1); Field(b.PlacementAvailable ? v.PlacementFailed : -1); Field(b.PlacementAvailable ? v.Context : -1); Field(b.PlacementAvailable ? v.ContextFailed : -1);
                 Field(b.CategoryAvailable ? v.Large : -1); Field(b.CategoryAvailable ? v.Boss : -1); Field(v.Marker); Field(b.DroppedBatches); Field(b.DroppedBuckets);
                 Field(v.State.GameMinutes); Field(v.State.Region);
+                Field(b.LifecycleAvailable ? v.DeathRegular : -1); Field(b.LifecycleAvailable ? v.DeathLarge : -1);
+                Field(b.LifecycleAvailable ? v.DeathBoss : -1); Field(b.LifecycleAvailable ? v.DeathUnknown : -1);
                 csv.WriteLine(row.ToString());
             }
             row.Clear(); row.Append("window=").Append(b.Sequence).Append(" reason=").Append(b.Reason)
@@ -192,10 +195,12 @@ namespace ExpandedHordes
             log.WriteLine("writer_failures=" + b.WriterFailures + " max_writer_lag_ms=" + Number(b.WriterLagMs) + " off_thread_events_rejected=" + b.WrongThreadEvents);
             log.WriteLine("alive_reconciliation_delta=" + (b.ReconciliationAvailable && b.LifecycleAvailable ? b.ReconciliationDelta.ToString(Inv) : "unavailable") + " sampled_below_target_ms_session=" + Number(b.SampledBelowTargetMs));
             long fresh = 0, deaths = 0, restored = 0, other = 0, placements = 0, rejected = 0, missed = 0;
+            long deathRegular = 0, deathLarge = 0, deathBoss = 0, deathUnknown = 0;
             int aliveMin = int.MaxValue, aliveMax = -1, corpseMin = int.MaxValue, corpseMax = -1;
             for (int i = 0; i < b.Count; i++)
             {
                 var v = b.Buckets[i]; fresh += v.Fresh; restored += v.Restored; deaths += v.Deaths; other += v.OtherRemoved;
+                deathRegular += v.DeathRegular; deathLarge += v.DeathLarge; deathBoss += v.DeathBoss; deathUnknown += v.DeathUnknown;
                 placements += v.Placement; rejected += v.PlacementFailed; missed += v.Missed;
                 if (v.State.Alive >= 0) { aliveMin = Math.Min(aliveMin, v.State.Alive); aliveMax = Math.Max(aliveMax, v.State.Alive); }
                 if (v.State.Corpses >= 0) { corpseMin = Math.Min(corpseMin, v.State.Corpses); corpseMax = Math.Max(corpseMax, v.State.Corpses); }
@@ -204,9 +209,11 @@ namespace ExpandedHordes
                 b.LifecycleAvailable ? fresh : -1, b.LifecycleAvailable ? restored : -1, b.LifecycleAvailable ? deaths : -1, b.LifecycleAvailable ? other : -1,
                 b.PlacementAvailable ? rejected : -1, b.PlacementAvailable ? placements : -1, aliveMin == int.MaxValue ? -1 : aliveMin, aliveMax,
                 corpseMin == int.MaxValue ? -1 : corpseMin, corpseMax, missed, b.EndMs > b.StartMs ? Number(b.Count * 1000d / (b.EndMs - b.StartMs)) : "unavailable"));
+            log.WriteLine("window_deaths regular=" + (b.LifecycleAvailable ? deathRegular : -1) + " large=" + (b.LifecycleAvailable ? deathLarge : -1) +
+                " boss=" + (b.LifecycleAvailable ? deathBoss : -1) + " unknown=" + (b.LifecycleAvailable ? deathUnknown : -1) + " attribution=all_causes");
             row.Clear(); row.Append("session_totals");
             for (int i = 0; i < b.TotalSnapshot.Length; i++)
-                row.Append(' ').Append((TelemetryEvent)i).Append('=').Append((i == 4 || i == 5 ? b.CorpseEventsAvailable : i >= 10 ? b.CategoryAvailable : i >= 6 ? b.PlacementAvailable : b.LifecycleAvailable) ? b.TotalSnapshot[i] : -1);
+                row.Append(' ').Append((TelemetryEvent)i).Append('=').Append((i >= (int)TelemetryEvent.DeathRegular ? b.LifecycleAvailable : i == 4 || i == 5 ? b.CorpseEventsAvailable : i >= 10 ? b.CategoryAvailable : i >= 6 ? b.PlacementAvailable : b.LifecycleAvailable) ? b.TotalSnapshot[i] : -1);
             log.WriteLine(row.ToString());
             for (int i = 0; i < 7; i++)
                 if (b.Observed[i] != 0)
@@ -216,6 +223,10 @@ namespace ExpandedHordes
             if (b.HasHorde)
             {
                 var h = b.Horde;
+                log.WriteLine("horde_deaths id=" + h.Id + " regular=" + (b.LifecycleAvailable ? h.Events[(int)TelemetryEvent.DeathRegular] : -1) +
+                    " large=" + (b.LifecycleAvailable ? h.Events[(int)TelemetryEvent.DeathLarge] : -1) +
+                    " boss=" + (b.LifecycleAvailable ? h.Events[(int)TelemetryEvent.DeathBoss] : -1) +
+                    " unknown=" + (b.LifecycleAvailable ? h.Events[(int)TelemetryEvent.DeathUnknown] : -1) + " attribution=all_causes");
                 log.WriteLine(string.Format(Inv, "horde_observation_cumulative id={0} reason={1} duration_ms={2:0.###} fresh={3} restored={4} deaths={5} other_removed={6} peak_alive={7} peak_pool={8} frame_count={9} mean_ms={10} p95_approx_ms={11} p99_approx_ms={12} max_ms={13} lost_buckets={14} peak_managed_bytes={15} worst_completed_window_fps={16}",
                     h.Id, h.Reason, h.EndMs - h.StartMs, b.LifecycleAvailable ? h.Events[0] : -1, b.LifecycleAvailable ? h.Events[1] : -1,
                     b.LifecycleAvailable ? h.Events[2] : -1, b.LifecycleAvailable ? h.Events[3] : -1, h.PeakAlive, h.PeakCorpses,

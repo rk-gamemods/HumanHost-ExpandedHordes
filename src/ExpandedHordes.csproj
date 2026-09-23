@@ -10,6 +10,8 @@
     <HumanHostRef Include="UnityEngine.TextRenderingModule" />
     <HumanHostRef Include="UnityEngine.InputLegacyModule" />
     <HumanHostRef Include="Terrain" />
+    <HumanHostRef Include="Weather" />
+    <HumanHostRef Include="Enviro3.Runtime" />
     <HumanHostRef Include="Global_Funcs" />
     <HumanHostRef Include="AI" />
     <HumanHostRef Include="Creature" />

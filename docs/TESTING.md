@@ -48,11 +48,19 @@ results are separate from this gate; none of the following is checked off yet.
   With light profiling on, verify `Zombie_Agent._Update` has no diagnostic patch.
   Enable detailed timings separately and confirm observed/timed/cap-skipped counts.
 - [ ] Verify the overlay appears with Debug Mode and disappears when it is off.
-  Check HUD position/scale, text refresh and draw cost separately. Confirm there
-  are no diagnostic buttons or hotkeys and other mods' controls remain unchanged.
+  Check HUD position/scale, text refresh and draw cost separately. Confirm
+  the Start Horde Now hint follows its configured binding and other mods'
+  controls remain unchanged. With Debug Mode off, the shortcut must do nothing.
+- [ ] Trigger a horde during daytime and at night. Confirm one new wave starts,
+  daytime changes to night, and repeated presses cannot restart an active wave.
+  Test loading, pause, menus, disabling Debug Mode during the pending night
+  transition, and changing worlds: no delayed trigger may fire afterward.
 - [ ] Compare failed spawn attempts, successful registration, saved restoration,
   confirmed death, live pool return, duplicate notification and reused identities.
   Verify the fresh/restored/death/other totals against visible/native state. Check
+  regular, large and boss deaths separately, including restored enemies; category
+  death totals must sum to total deaths. A live pool return must add no death.
+  Unknown classifications must remain labeled unknown. Check
   corpse pool adds/removes including restored bodies and distance hiding.
 - [ ] Test pause, a long load/stall, scene unload and orderly quit. Verify actual
   durations, gap counts, partial summaries and unavailable CPU/GPU values. Verify
