@@ -22,7 +22,7 @@ Higher counts come with heavy performance cost.
 
 [b]Installation[/b]
 
-We recommend [url=https://github.com/xem888/HHMM#download--install]Human Host Mod Manager (HHMM)[/url]. It's what we use to install the mod and change its settings.
+Recommended: [url=https://github.com/xem888/HHMM#download--install]Human Host Mod Manager (HHMM)[/url].
 
 1. Close the game and open HHMM. Use its BepInEx installer if you haven't set up BepInEx yet.
 2. Subscribe to Expanded Hordes on Steam Workshop and wait for the download to finish.
