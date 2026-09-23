@@ -21,8 +21,20 @@ Make it the night you barely survive. Then decide whether the next one should be
 Higher counts come with heavy performance cost.
 
 [b]Installation[/b]
+
 1. Open Human Host's Workshop menu, find Expanded Hordes, and click Install.
 2. Restart the game.
+
+[b]Manual Installation[/b]
+
+If your other BepInEx mods already work, skip to step 4.
+
+1. Close the game. Download the Windows x64 ZIP from [url=https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5]BepInEx 5.4.23.5[/url] and extract it into the game folder, beside Human Host.exe.
+2. Launch the game once, then close it to create the BepInEx configuration files.
+3. Open BepInEx\config\BepInEx.cfg, set HideManagerGameObject = true, and save.
+4. Subscribe to Expanded Hordes on Steam Workshop and wait for the download to finish.
+5. With the game closed, find this mod's numbered folder under steamapps\workshop\content\2393970\. Copy its ExpandedHordes folder into Human Host\BepInEx\plugins\.
+6. Start the game.
 
 [b]Source code[/b]
 https://github.com/rk-gamemods/HumanHost-ExpandedHordes
