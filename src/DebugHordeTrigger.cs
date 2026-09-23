@@ -26,7 +26,7 @@ namespace ExpandedHordes
         {
             hotkey = config.Bind("Diagnostics", "Start Horde Hotkey",
                 new KeyboardShortcut(KeyCode.Pause, KeyCode.LeftControl, KeyCode.LeftShift),
-                "Debug Mode only. Start a horde immediately with current settings. During daytime, moves the clock to 19:00; existing nighttime is preserved. Advances the horde number and reschedules the next natural horde. The game's normal start clears surviving zombies from the previous horde. Refuses while a horde is still spawning, in menus, while paused, or before the world is ready. None disables the shortcut. Other mods may ignore modifiers; consult the conflict report.");
+                "Debug only: start the next horde now; daytime advances to 19:00. Clears previous horde survivors; unavailable during spawning. None disables.");
             hotkey.SettingChanged += OnHotkeyChanged;
             RefreshHint();
             try
