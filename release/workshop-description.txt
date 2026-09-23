@@ -1,6 +1,22 @@
-Control horde size, boss and large zombie spawns, running speed, damage resistance, corpse limits and attraction range.
+You built the walls. Stocked the ammunition. Picked the place where you'd make your stand.
 
-Running speed and damage resistance default to vanilla. Boss and large zombie limits stop extra spawns from this mod when the limit is reached. Vanilla spawns still count toward the limits, but are not blocked.
+Now something in the dark is coming to test all of it.
+
+Expanded Hordes turns Human Host's horde night into the siege you prepared for. Footsteps become a roar. A familiar path disappears beneath a crowd of bodies. Somewhere behind them, something much bigger is pushing its way to the front.
+
+[b]SET YOUR HORDE SIZE[/b]
+How many is too many? Set your horde size and find out. Leave yourself room to breathe, or fill the approach until every shot buys only a moment. That spare magazine, that second way out, that wall you almost didn't finish: tonight, you'll be glad they're there.
+
+[b]SHAPE YOUR HORDE[/b]
+A sea of smaller zombies can bury you in numbers. A few towering bosses can turn a comfortable firing position into somewhere you desperately need to leave. Choose the mix of regular zombies, large zombies and bosses. Keep the heavy hitters rare enough to dread their arrival, or let them lead an army of their own. Limits on the mod's extra bosses and large zombies help keep that pressure where you want it; those limits don't block the game's own boss or large-zombie spawns.
+
+[b]STILL NOT HARD ENOUGH?[/b]
+Then give yourself less time to react. Faster runners close the gap while you're reloading. Added damage resistance makes the next kill cost more ammunition, more time, and more nerve. Both are optional. Speed and damage resistance start at vanilla values, so a bigger horde doesn't automatically mean faster, tougher zombies. Turn them up when you're ready for that fight.
+
+[b]THEY KEEP COMING. HOLD UNTIL DAWN.[/b]
+The front rank falls. The next one steps over it. Set the night's total spawn budget to keep replacements coming as you cut the horde down. New spawns stop when that budget runs out or dawn arrives. Give the night enough bodies, and that first pale light becomes something you'll fight to see.
+
+Make it the night you barely survive. Then decide whether the next one should be worse.
 
 Higher counts come with heavy performance cost.
 

@@ -1,0 +1,35 @@
+EXPANDED HORDES 0.2.0
+
+1. Choose a cover from the three cover-*.jpg files in upload-images.
+2. Launch Human Host through Steam. Open Workshop, then Upload Mod.
+3. Set the title to Expanded Hordes. Paste workshop-description.txt into the
+   description field and select your chosen cover as the primary preview.
+4. Start a new upload and select the content folder from this release package.
+   The game publishes the item publicly. Accept Steam's Workshop agreement
+   if prompted.
+5. Open the new item's Steam Workshop page. In the owner controls, open the
+   image/video editor and add the four numbered feature images in order.
+   The exact editor label can vary; look for Add/Edit Images & Videos.
+6. Check the cover, description and four gallery images on Steam and in the
+   game's Workshop. It is the same Workshop item in both places.
+
+Only select content for the mod upload. The images and description are listing
+assets, not plugin files. Images placed in content will not create a gallery.
+
+COVERS
+cover-scream.jpg: roaring boss with a ruined jaw.
+cover-stare.jpg: close boss face staring at the viewer.
+cover-emergence.jpg: boss forcing its way through the crowd.
+No final cover has been selected.
+
+GALLERY ORDER
+01-horde-size.jpg
+02-horde-composition.jpg
+03-speed-resistance.jpg
+04-until-dawn.jpg
+
+The JPGs are upload-sized copies. Keep the original PNGs for future use.
+The artwork is promotional concept art, not gameplay screenshots.
+
+STEAM REFERENCE
+https://partner.steamgames.com/doc/api/ISteamUGC#AddItemPreviewFile
