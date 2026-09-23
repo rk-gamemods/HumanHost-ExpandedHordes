@@ -94,16 +94,17 @@ internal static class Program
         {
             int[] counts = new int[3];
             for (int roll = 0; roll < 100; roll++)
-                counts[HordeRules.Category(roll, region, 11, 12, 20, 5)]++;
+                counts[HordeRules.Category(roll * 100, region, 11, 12, 20, 5)]++;
             Check(counts[1] == (region >= 11 ? 20 : 0), "Independent large gate and percentage");
             Check(counts[2] == (region >= 12 ? 5 : 0), "Independent boss gate and percentage");
             Check(counts[0] + counts[1] + counts[2] == 100, "All slots accounted for");
         }
         for (int roll = 0; roll < 100; roll++)
-            Check(HordeRules.Category(roll, 11, 11, 11, 0, 0) == 0, "Zero percentages retain vanilla");
-        Check(HordeRules.Category(79, 11, 11, 11, 40, 40) == 1, "Maximum extra chances cover 80 slots");
-        Check(HordeRules.Category(80, 11, 11, 11, 40, 40) == 0, "Maximum chances leave 20 native slots");
+            Check(HordeRules.Category(roll * 100, 11, 11, 11, 0, 0) == 0, "Zero percentages retain vanilla");
+        Check(HordeRules.Category(7900, 11, 11, 11, 40, 40) == 1, "Maximum extra chances cover 80 slots");
+        Check(HordeRules.Category(8000, 11, 11, 11, 40, 40) == 0, "Maximum chances leave 20 native slots");
 
+        LivingSpecialChecks.Run(Check);
         TelemetryChecks.Run(Check);
         DeathCategoryChecks.Run(Check);
         DebugHordeChecks.Run(Check);
@@ -142,6 +143,7 @@ internal static class Program
             dll.Fields("Terrain_Loader_Manager", "BigTerraWidth", "_ins", "_biomesWidthDis");
             dll.FieldType("NPC_Horde_Mgr", "_ins", "NPC_Horde_Mgr", true);
             dll.FieldType("NPC_Horde_Mgr", "_aliveHordeNPCs", "Dictionary`2<GameObject,Horde_NPC_Info>");
+            dll.FieldType("NPC_Horde_Mgr", "_inAsyncSpawnNPC", "Boolean");
             dll.FieldType("NPC_Horde_Mgr", "_hordeSaveData", "Horde_Save_Data");
             dll.FieldType("NPC_Horde_Mgr", "_corHordeSpawn", "Coroutine");
             dll.FieldType("NPC_Horde_Mgr", "_G_Info", "Global_Infos");

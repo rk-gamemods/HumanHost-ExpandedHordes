@@ -30,13 +30,27 @@ namespace ExpandedHordes
             return Math.Max(1, 1 + (int)Math.Floor((Math.Sqrt(gx * gx + gz * gz) - 12) / biomeWidth));
         }
 
-        // Disjoint chances: a disabled category's probability goes back to vanilla.
+        // Disjoint chances, with a 0..9999 roll giving 0.01 percentage-point
+        // resolution. A disabled or capped choice keeps the original native pick.
         internal static int Category(int roll, int region, int largeBegin, int bossBegin,
-            int largePercent, int bossPercent)
+            float largePercent, float bossPercent)
         {
-            int boss = region >= bossBegin ? bossPercent : 0;
-            int large = region >= largeBegin ? largePercent : 0;
+            if (roll < 0 || roll >= 10000) return 0;
+            int boss = region >= bossBegin ? BasisPoints(bossPercent) : 0;
+            int large = region >= largeBegin ? BasisPoints(largePercent) : 0;
             return roll < boss ? 2 : roll < boss + large ? 1 : 0;
+        }
+
+        private static int BasisPoints(float percent) => float.IsNaN(percent) || float.IsInfinity(percent) ? 0 :
+            (int)Math.Round(Math.Max(0d, Math.Min(40d, percent)) * 100d, MidpointRounding.AwayFromZero);
+
+        internal static bool AllowsExtra(int category, bool populationKnown, int livingLarge, int livingBoss,
+            int largeLimit, int bossLimit)
+        {
+            if (category != 1 && category != 2) return false;
+            int limit = category == 2 ? bossLimit : largeLimit;
+            int count = category == 2 ? livingBoss : livingLarge;
+            return limit == 0 || (limit > 0 && populationKnown && count >= 0 && count < limit);
         }
     }
 }
