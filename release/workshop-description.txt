@@ -1,0 +1,13 @@
+Control horde size, boss and large zombie spawns, running speed, damage resistance, corpse limits and attraction range.
+
+Running speed and damage resistance default to vanilla. Boss and large zombie limits stop extra spawns from this mod when the limit is reached. Vanilla spawns still count toward the limits, but are not blocked.
+
+Higher counts come with heavy performance cost.
+
+[b]Installation[/b]
+1. Subscribe to Expanded Hordes on Steam Workshop.
+2. Open Human Host's Workshop menu, find Expanded Hordes, and click Install.
+3. Restart the game.
+
+[b]Source code[/b]
+https://github.com/rk-gamemods/HumanHost-ExpandedHordes
