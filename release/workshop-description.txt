@@ -22,8 +22,12 @@ Higher counts come with heavy performance cost.
 
 [b]Installation[/b]
 
-1. Open Human Host's Workshop menu, find Expanded Hordes, and click Install.
-2. Restart the game.
+We recommend [url=https://github.com/xem888/HHMM#download--install]Human Host Mod Manager (HHMM)[/url]. It's what we use to install the mod and change its settings.
+
+1. Close the game and open HHMM. Use its BepInEx installer if you haven't set up BepInEx yet.
+2. Subscribe to Expanded Hordes on Steam Workshop and wait for the download to finish.
+3. In HHMM, install Expanded Hordes from your subscribed mods and make sure it's enabled.
+4. Start the game.
 
 [b]Manual Installation[/b]
 
