@@ -2,14 +2,15 @@
 
 This standalone repository contains one plugin. Runtime source is under `src/`;
 the console checks under `tests/` share the small calculation classes directly.
-Settings in `ModSettings.cs` are authoritative. This is still a pre-testing alpha.
+Settings in `ModSettings.cs` are authoritative. This is an alpha with limited
+local play-testing.
 
 | Files | Purpose |
 | --- | --- |
 | `Plugin`, `ModIdentity`, `ModSettings` | Startup, identity and configuration. |
 | `FeatureRuntime` | Separate Harmony owners, idempotent installation and feature failure handling. |
 | `Population`, `PopulationOverrides`, `HordeRules` | Total/living limits, vanilla quantity scaling and guarded restoration of owned fields. |
-| `CreatureCatalog`, `HordeSetup`, `SpecialRoster` | Creature identities, initialization and fresh-spawn selection. |
+| `CreatureCatalog`, `HordeSetup`, `SpecialRoster`, `HordeSpecialLimits` | Creature identities, initialization, fresh-spawn selection and living special counts. |
 | `HordeRunSpeed`, `HordeAttraction` | Temporary running boost and one-time lure. |
 | `DamageResistance`, `CombatRules` | Health-loss reduction and category/corpse rules. |
 | `CorpseRetention` | Narrow adjustment of the native corpse-limit read. |
@@ -22,7 +23,20 @@ Settings in `ModSettings.cs` are authoritative. This is still a pre-testing alph
   `SetHorde_MaxAllowActiveZombies` implement population settings while retaining
   native scheduling and spawning.
 - `NPC_Horde_Mgr.Spawn_Horde_NPC` changes selection arguments for fresh async
-  spawns. Restored survivors keep their saved identities.
+  spawns. Restored survivors keep their saved identities. Living special-type
+  limits suppress only this mod's extra selection when the corresponding count
+  is at its limit. The native selection remains intact, with no culling or hard
+  cap on vanilla types. Counts include vanilla members and restored survivors;
+  the normal configured chance resumes below the limit. Zero means unlimited.
+  Chance settings are floating-point percentages from 0 through 40; whole-number
+  configuration values retain their meaning. `HordeRules.Category` uses a
+  0-9,999 roll for 0.01 percentage-point resolution.
+- `HordeSpecialLimits.TryCount` reads `_aliveHordeNPCs` and native
+  `NPC_Input.is_Boss` before an extra selection. It includes native choices and
+  restored survivors without depending on diagnostic hooks. Unavailable or
+  incomplete classification suppresses the limited extra selection and logs a
+  warning; native selection continues. `_inAsyncSpawnNPC` and a scoped guard
+  prevent overlapping extra selections during native spawn construction.
 - `NPC_Horde_Mgr.StartHordeEvent` and `AI_Agen_Mgr.Broadcast_Sound_Played` drive
   the paired one-time lure using the game's existing sound response.
 - The debug shortcut calls `NPC_Horde_Mgr.Try_Get_Spawn_Context` before requesting

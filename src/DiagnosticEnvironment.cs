@@ -26,7 +26,8 @@ namespace ExpandedHordes
             b.AppendLine("debug=" + ModSettings.DebugMode.Value + " profiling=" + ModSettings.Profiling.Value + " hud=" + ModSettings.DebugMode.Value + " detailed=" + ModSettings.DetailedTimings.Value);
             b.AppendLine("report_file_mib=" + ModSettings.ReportFileMiB.Value + " retained_files_per_stream=2; threshold_may_be_exceeded_by_one_batch");
             b.AppendLine("run_speed_percent=" + ModSettings.RunSpeedPercent.Value + " resistance_regular/large/boss=" + ModSettings.RegularResistance.Value + "/" + ModSettings.LargeResistance.Value + "/" + ModSettings.BossResistance.Value);
-            b.AppendLine("large_begin/percent=" + ModSettings.LargeBegin.Value + "/" + ModSettings.LargePercent.Value + " boss_begin/percent=" + ModSettings.BossBegin.Value + "/" + ModSettings.BossPercent.Value);
+            b.AppendLine("large_begin/percent=" + ModSettings.LargeBegin.Value + "/" + ModSettings.LargePercent.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) + " boss_begin/percent=" + ModSettings.BossBegin.Value + "/" + ModSettings.BossPercent.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            b.AppendLine("scripted_special_living_limits large/boss=" + ModSettings.LargeLimit.Value + "/" + ModSettings.BossLimit.Value + "; 0=unlimited; native/restored horde members count; native choices unchanged");
             b.AppendLine("attraction_height/radius=" + ModSettings.AttractionHeight.Value + "/" + ModSettings.AttractionRadius.Value + " hud_x/y/scale=" + ModSettings.HudX.Value + "/" + ModSettings.HudY.Value + "/" + ModSettings.HudScale.Value);
             if (G_Save._config != null) b.AppendLine("native_horde_quantity_factor=" + G_Save._config._Horde_Z_NumF + " native_corpse_limit=" + G_Save._config._MaxCorpseCount);
             foreach (Feature feature in Enum.GetValues(typeof(Feature)))

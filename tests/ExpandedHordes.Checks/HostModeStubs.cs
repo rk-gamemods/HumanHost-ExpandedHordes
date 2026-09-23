@@ -106,7 +106,7 @@ namespace HarmonyLib
 }
 internal sealed class Zombie_Agent { }
 internal sealed class GPUI_Dead_Body_Mgr { }
-internal sealed class NPC_Horde_Mgr { }
+internal sealed partial class NPC_Horde_Mgr { }
 namespace ExpandedHordes
 {
     internal static class ModIdentity { internal const string Guid = "expanded.hordes"; }
@@ -123,6 +123,7 @@ namespace ExpandedHordes
     {
         internal static readonly HashSet<Feature> Installed = new HashSet<Feature>(), Failures = new HashSet<Feature>();
         internal static bool Enabled(Feature feature) => !Failures.Contains(feature);
+        internal static void WarnOnce(string key, string message) { }
         internal static string DisabledSummary => string.Join(", ", Failures);
         internal static void InstallProfiler() => Install(Feature.Profiling);
         internal static void Install(Feature feature, params Type[] patches) { if (Enabled(feature)) Installed.Add(feature); }

@@ -1,6 +1,6 @@
 # Alpha play-test checklist
 
-**Not yet play-tested. No guarantee of function or compatibility.** Back up saves
+**Alpha with limited local play-testing.** Back up saves
 and use a disposable world. Record the game build, mod version and other mods.
 
 - Confirm the game loads the plugin and its log names Expanded Hordes 0.2.0.
@@ -17,6 +17,18 @@ and use a disposable world. Record the game build, mod version and other mods.
 - Temporarily set both extra-type region gates to 1 and chances to 40%. Check
   large types and bosses for appearance, movement, combat, death and loot.
   Random chances do not guarantee every type in a short test. Restore settings.
+- Test living special limits of 1 boss and 5 large enemies. Vanilla spawns and
+  restored survivors must count. At the limit, extra selections must stop while
+  the original vanilla choice stays unchanged. After a death or removal reduces
+  the count, the normal chance must resume. Setting 0 must remove that extra-type
+  limit without removing existing enemies. Vanilla special spawns may exceed it.
+- Enter fractional chances such as 0.5%, 0.25% and 0.01%; save, restart and verify
+  the values remain unchanged. Existing integer values must still load. Check
+  fractional selection with deterministic tests; a short play-test cannot prove
+  a rare probability.
+- Verify new defaults: 100% speed, 0% resistance for all three categories, and
+  living target 75. The living target accepts at most 500 and speed at most 150%.
+  Shared AI Allowance still defaults to 90 and accepts up to 1,000.
 - Compare the same type/level and same weapon/hit location at 0% and 50%
   resistance. Actual HP loss should halve while maximum HP and kill XP stay the
   same. Damage text may show the unreduced hit. Test the three categories
@@ -36,8 +48,9 @@ and use a disposable world. Record the game build, mod version and other mods.
   not establish that two mods work together or that high settings perform well.
 
 Before reporting results, remove private information from logs and screenshots.
-No performance ceiling or publication-ready status should be inferred from this
-checklist until the actual tests have been completed and their results recorded.
+The [README performance note](../README.md#performance-compatibility-and-bug-reports)
+records one observed 200-enemy run. It does not establish a safe maximum or replace
+the remaining checks above.
 
 ## Issue #1 runtime gate
 

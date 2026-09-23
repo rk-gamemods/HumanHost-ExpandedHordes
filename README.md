@@ -1,7 +1,7 @@
 # Expanded Hordes for Human Host
 
-**Pre-testing alpha: this mod has not been play-tested. There is no guarantee
-that it works correctly, works with other mods, or is safe for an existing save.**
+**Alpha with limited local play-testing. Compatibility and save safety have not
+been established across game versions and mod combinations.**
 Back up your saves and use a disposable test world if you try it.
 
 Expanded Hordes is designed to make Horde Night more dangerous. Choose how many
@@ -11,7 +11,7 @@ bodies around after the fighting.
 
 This repository contains only Expanded Hordes. It is a source-code alpha, not a
 Steam Workshop release or a tested finished mod. The current plugin version is
-0.2.0. Build and automated checks have passed; actual gameplay is still unverified.
+0.2.0. See the performance notes below for observations from local play-testing.
 
 ## What it changes
 
@@ -28,7 +28,8 @@ Two settings control the horde's size:
   Horde Quantity percentage. At 800%, that means up to 8,000 zombies over the
   night, not 8,000 alive together. Dawn can stop spawning before the budget is used.
 - **Living Horde Target** is how many horde zombies can be alive at once. The
-  default is 75. Killing one makes room for another while the budget lasts.
+  default is 75, with a maximum setting of 500. Killing one makes room for
+  another while the budget lasts.
 
 The budget setting accepts 1-50,000 **before** the game's multiplier. At 800%,
 50,000 becomes a budget of 400,000. These are setting limits, not tested safe
@@ -40,9 +41,9 @@ reaches 60. The mod uses your selected budget instead of that per-horde growth.
 
 ### Faster runners and tougher enemies
 
-Horde zombies run at **125%** of their normal running speed by default. This
-applies only while nighttime horde spawning is active. Normal speed returns when
-spawning finishes or dawn arrives, whichever comes first. Walking and attacks
+Running speed defaults to **100%**, the game's normal speed, and accepts
+25-150%. Changes apply only while nighttime horde spawning is active. Normal
+speed returns when spawning finishes or dawn arrives, whichever comes first. Walking and attacks
 keep their normal speed; walking zombies are not forced to run.
 
 Damage resistance makes horde zombies harder to kill without increasing their
@@ -50,9 +51,9 @@ maximum health or health-based kill XP:
 
 | Zombie category | Default damage prevented |
 | --- | ---: |
-| Regular zombies | 25% |
-| Large non-boss zombies | 40% |
-| Bosses | 50% |
+| Regular zombies | 0% |
+| Large non-boss zombies | 0% |
+| Bosses | 0% |
 
 Each category can be set from 0% to 95%. At 50% resistance, half the incoming
 health damage gets through. At 0%, this mod adds no resistance.
@@ -69,6 +70,17 @@ with a large non-boss and a **5% chance** to be replaced with a boss, once its
 region gate is reached. Each starting attacker and each replacement gets its
 own chance. These are not guaranteed numbers or one roll for the whole night.
 The game's normal choices can also include special types.
+
+Extra additions pause when **1 boss** or **5 large non-boss zombies** are already
+alive in the horde, by default. Vanilla spawns and restored survivors count
+toward these limits. The limits only stop this mod's extra selections: they do
+not remove enemies or change a vanilla selection, so actual counts can exceed
+them. Normal chances resume when the living count falls below the limit.
+Set either living limit to **0 for unlimited extra additions**.
+
+Both chance settings accept fractions in 0.01% steps, including **0.5%, 0.25%
+and 0.01%**.
+Existing whole-number settings remain valid. Enter 0 to disable that extra chance.
 
 The two gates default to region 11, the second cycle of ten biome regions as
 you move outward. Set a gate to 1 to allow those extras near the starting area.
@@ -98,16 +110,18 @@ guarantee that bodies form solid, climbable piles. Removed corpses can lose loot
 | Setting | Default | Allowed range |
 | --- | ---: | --- |
 | Total Spawn Budget | 1,000 | 1-50,000 before Horde Quantity |
-| Living Horde Target | 75 | 1-1,000 |
+| Living Horde Target | 75 | 1-500 |
 | Shared AI Allowance | 90 | 1-1,000 |
-| Horde Run Speed Percentage | 125% | 25-300% |
-| Regular Zombie Resistance | 25% | 0-95% |
-| Large Zombie Resistance | 40% | 0-95% |
-| Boss Resistance | 50% | 0-95% |
+| Horde Run Speed Percentage | 100% | 25-150% |
+| Regular Zombie Resistance | 0% | 0-95% |
+| Large Zombie Resistance | 0% | 0-95% |
+| Boss Resistance | 0% | 0-95% |
 | Extra Large Zombie Begin Biome | 11 | 1-1,000,000 |
 | Extra Boss Zombie Begin Biome | 11 | 1-1,000,000 |
-| Extra Large Zombie Percentage | 20% | 0-40% |
-| Extra Boss Zombie Percentage | 5% | 0-40% |
+| Extra Large Zombie Percentage | 20% | 0-40%, including fractions |
+| Extra Boss Zombie Percentage | 5% | 0-40%, including fractions |
+| Large Zombie Living Limit | 5 | 0-500; 0 means unlimited extra additions |
+| Boss Zombie Living Limit | 1 | 0-500; 0 means unlimited extra additions |
 | Elevated Sound Height | 100 m | 0-100 m |
 | Hearing Radius | 250 m | 1-250 m |
 | Retained Corpse Limit | 300 | 1-5,000 |
@@ -147,8 +161,11 @@ does not make an untested alpha safe for valuable saves.
 
 ## Performance, compatibility and bug reports
 
-More attackers, faster arrivals, bosses and extra corpses can reduce frame rate.
-No safe maximum, FPS result or broad compatibility claim has been established.
+More living enemies increase CPU load and can cause stutter. One local test at
+**200 living enemies and 100% speed** averaged **64.5 FPS**, with middle minutes
+around **60-63 FPS** and noticeable stutter, on a Ryzen 7 9800X3D, RTX 4070 Ti
+and 64 GB RAM. The tester found that size felt like a full horde, including
+large enemies and bosses. This is one system and scenario, not an FPS guarantee.
 Other mods changing the same spawning, movement, health or corpse behavior may
 conflict. Direct forced-death effects can bypass resistance, and some damage
 displays may show the hit amount before reduction. Native survivor-health

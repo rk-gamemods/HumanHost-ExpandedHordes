@@ -1,8 +1,8 @@
 # Play-test diagnostics
 
 This implementation works toward [issue #1](https://github.com/rk-gamemods/HumanHost-ExpandedHordes/issues/1).
-The code builds and its pure/native-metadata checks pass. Unity execution and
-the issue's end-to-end performance acceptance remain unverified. The
+Local game runs have produced frame, population and categorized-death reports.
+The issue's controlled end-to-end performance acceptance remains unverified. The
 [acceptance audit](ISSUE-1-ACCEPTANCE.md) separates completed implementation work
 from the remaining runtime checks.
 
@@ -36,6 +36,11 @@ Reports are local in `diagnostics/` beside the DLL:
   method timings, data-loss counts, and automatic inventory updates.
 - `environment.txt`: session settings, versions, assembly MVID build identity,
   hardware capacities, graphics configuration and BepInEx plugin inventory.
+
+Record both extra-type chances and living limits when comparing horde tests.
+The limits pause only this mod's extra selections; vanilla special types can
+exceed them. Spawn counts in the report are cumulative, so they are not the
+current number of living bosses or large enemies.
 
 Each CSV/log retains at most a current and previous file, rotating after a batch
 at the Report File MiB threshold (default 5, configurable from 1 to 64). A file
@@ -201,6 +206,11 @@ They must not be averaged. The histogram includes long frames in count/sum/max
 even when their percentile falls into overflow.
 
 ## Measured validation and remaining gates
+
+For the measured 200-enemy gameplay result and test hardware, see the short
+[README performance note](../README.md#performance-compatibility-and-bug-reports).
+That observation is separate from the synthetic checks below and does not
+measure the overhead added by diagnostics.
 
 Run without Unity:
 
