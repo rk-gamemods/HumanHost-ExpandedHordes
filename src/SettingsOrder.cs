@@ -18,7 +18,7 @@ namespace ExpandedHordes
             new[] { "Horde Run Speed Percentage" },
             new[] { "Regular Zombie Resistance", "Large Zombie Resistance", "Boss Resistance" },
             new[] { "Retained Corpse Limit" },
-            new[] { "Hearing Radius", "Elevated Sound Height" },
+            new[] { "Attraction Range" },
             new[] { "Debug Mode", "Performance Profiling", "Detailed Method Timings", "Start Horde Hotkey",
                 "HUD Scale", "HUD X", "HUD Y", "Report File MiB" }
         };

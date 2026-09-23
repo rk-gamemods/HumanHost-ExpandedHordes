@@ -12,6 +12,11 @@ and use a disposable world. Record the game build, mod version and other mods.
   allow replacements and no new spawns arrive after the budget is exhausted.
 - Check the game's disabled-horde and every-N-nights choices. With budget left,
   spawning should end around native dawn, allowing the game's polling delay.
+- Check Attraction shows only Attraction Range. Test nearby zombies at horde
+  start in open terrain and near obstacles. Existing custom range values must
+  survive an upgrade; an already configured Attraction Range takes precedence.
+  The upgrade checks run against BepInEx with
+  `dotnet run --project tests/ExpandedHordes.ConfigChecks -c Release -p:HumanHostDir="<game directory>"`.
 - Compare running at 100% and 125%. Check ordinary zombies, walking and attacks
   stay normal, and survivors lose the running boost when spawning ends or at dawn.
 - Temporarily set both extra-type region gates to 1 and chances to 40%. Check

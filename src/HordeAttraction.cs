@@ -7,6 +7,7 @@ namespace ExpandedHordes
 {
     internal static class HordeAttraction
     {
+        internal const float ElevatedLureHeight = 100f;
         internal static IEnumerator Safely(IEnumerator work)
         {
             try
@@ -44,7 +45,7 @@ namespace ExpandedHordes
                     yield break;
                 }
                 Vector3 position = player._ragDollMgr._headBodyScript.transform.position;
-                if (i == 1) position += Vector3.up * ModSettings.AttractionHeight.Value;
+                if (i == 1) position += Vector3.up * ElevatedLureHeight;
                 ai.Broadcast_Sound_Played(new Creature_Mgr.OnSoundPlayed_Param
                 {
                     charController = player,

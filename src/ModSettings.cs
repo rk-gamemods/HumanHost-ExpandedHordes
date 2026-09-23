@@ -6,7 +6,7 @@ namespace ExpandedHordes
     internal static class ModSettings
     {
         internal static ConfigEntry<int> Total, Living, Allowance, LargeBegin, BossBegin, LargeLimit, BossLimit, RunSpeedPercent;
-        internal static ConfigEntry<float> AttractionHeight, AttractionRadius, LargePercent, BossPercent;
+        internal static ConfigEntry<float> AttractionRadius, LargePercent, BossPercent;
         internal static ConfigEntry<int> RegularResistance, LargeResistance, BossResistance, CorpseLimit;
         internal static ConfigEntry<bool> DebugMode, Profiling, DetailedTimings;
         internal static ConfigEntry<float> HudScale;
@@ -45,10 +45,7 @@ namespace ExpandedHordes
             CorpseLimit = BindInt(config, "Corpses", "Retained Corpse Limit", 300, 1, 5000,
                 "Dead bodies kept nearby. More bodies use more memory and lower FPS. Older bodies are removed to make room.");
 
-            AttractionRadius = config.Bind("Attraction", "Hearing Radius", 250f,
-                new ConfigDescription("How far zombies hear the horde-start lure, in metres. Only attracts zombies already nearby.", new AcceptableValueRange<float>(1f, 250f)));
-            AttractionHeight = config.Bind("Attraction", "Elevated Sound Height", 100f,
-                new ConfigDescription("Height of the extra lure above you, in metres. A higher lure reaches less ground.", new AcceptableValueRange<float>(0f, 100f)));
+            AttractionRadius = AttractionSettings.Bind(config);
 
             DebugMode = config.Bind("Diagnostics", "Debug Mode", false,
                 "Show the HUD and save test logs. Enables the Start Horde hotkey.");
