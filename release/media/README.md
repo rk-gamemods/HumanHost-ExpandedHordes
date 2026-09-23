@@ -1,6 +1,6 @@
 # Workshop artwork
 
-The three square covers are alternatives. No final cover has been selected:
+The published cover is `cover-scream.jpg`. The other two are unused alternatives:
 
 - `cover-scream.jpg`: a roaring boss with a ruined jaw.
 - `cover-stare.jpg`: a boss staring directly at the viewer.
@@ -20,7 +20,7 @@ instructions belong in text, not the artwork.
 
 ## Add the images
 
-1. Select one of the three cover JPGs in Human Host's upload interface.
+1. Select `cover-scream.jpg` in Human Host's upload interface.
 2. After the Workshop item exists, open its Steam page as its owner.
 3. Open the image/video editor under Owner Controls, commonly labeled
    **Add/Edit Images & Videos**, and upload the four numbered gallery files
@@ -28,9 +28,10 @@ instructions belong in text, not the artwork.
 4. Check the item in Human Host: the cover belongs on the right and the
    additional images belong in the left carousel.
 
-The exact Steam editor labels have not been checked in an authenticated owner
-session. The game's uploader sets the main preview only. Placing images in the
-plugin's `content` folder does not add them to the gallery.
+The cover and four gallery images were uploaded on September 23, 2026 to
+[Expanded Hordes](https://steamcommunity.com/sharedfiles/filedetails/?id=3806576633).
+Steam's owner control is **Add/edit images & videos**. The game's uploader sets
+the main preview only. Images in `content` do not create a gallery.
 
 JPEG exports are below 1 MB each to meet Valve's
 [additional preview API limit](https://partner.steamgames.com/doc/api/ISteamUGC#AddItemPreviewFile).

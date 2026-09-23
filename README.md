@@ -9,9 +9,9 @@ zombies can arrive, how many can be alive together, how fast they run, and how
 much damage they resist. Add chances for large zombies and bosses, or keep more
 bodies around after the fighting.
 
-This repository contains only Expanded Hordes. It is a source-code alpha, not a
-Steam Workshop release or a tested finished mod. The current plugin version is
-0.2.0. See the performance notes below for observations from local play-testing.
+This repository contains only Expanded Hordes. Version 0.2.0 is available on
+[Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3806576633).
+See the performance notes below for observations from local play-testing.
 
 ## What it changes
 
