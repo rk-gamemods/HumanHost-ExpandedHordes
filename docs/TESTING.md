@@ -22,7 +22,8 @@ and use a disposable world. Record the game build, mod version and other mods.
   order. Change a supported setting, close the settings screen, restart, and
   confirm the same value in the BepInEx config and external HHMM. Confirm Start
   Horde Hotkey is read-only there and directs players to HHMM or the config.
-  Repeat without ModMenu: the plugin must load and file/HHMM editing must work.
+  Repeat in a separate setup without ModMenu: the plugin must load and
+  file/HHMM editing must work.
   Check the BepInEx log for new errors or a ModMenu registration warning.
 - Compare running at 100% and 125%. Check ordinary zombies, walking and attacks
   stay normal, and survivors lose the running boost when spawning ends or at dawn.
