@@ -89,7 +89,8 @@ Returning inward closes the extra chances again. Saved survivors keep their type
 At horde start, the mod automatically tries to draw nearby zombies toward you.
 **Attraction Range** controls how far the lure reaches. It makes no audible sound
 and only attracts zombies already nearby. Walls and normal pursuit rules can
-still prevent a response.
+still prevent a response. It does not pull underground zombies up to a player
+on the surface.
 
 ### More bodies left behind
 
