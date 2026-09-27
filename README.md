@@ -144,8 +144,10 @@ the living horde target.
 - Human Host on Windows, using its Unity Mono build.
 - BepInEx 5. The alpha was built against BepInEx 5.4.23.5 and Human Host Steam
   build 25448142. Other game builds have not been verified.
-- No additional gameplay mod is required. HHMM can edit the standard BepInEx
-  config; actual HHMM UI behavior for this alpha still needs testing.
+- No additional gameplay mod is required. This build registers its settings
+  with the optional Human Host Mod Menu 0.3.1 API for in-game editing; actual
+  in-game UI behavior still needs testing. HHMM is a separate external editor
+  for the same BepInEx config.
 
 There is no prebuilt download attached to this initial source publication.
 See [Building from source](docs/BUILDING.md) to produce the DLL.
@@ -155,7 +157,9 @@ See [Building from source](docs/BUILDING.md) to produce the DLL.
 3. Copy your built `ExpandedHordes.dll` into that folder. Keep only one copy enabled.
 4. Launch once to create
    `BepInEx/config/rkgamemods.humanhost.expandedhordes.cfg`, then close the game.
-5. Edit **Expanded Hordes** in HHMM, or edit that config file with a text editor.
+5. Edit **Expanded Hordes** in the game's settings if ModMenu is installed, in
+   external HHMM, or in that config file with a text editor. ModMenu 0.3.1
+   treats Start Horde Hotkey as read-only; change it in HHMM or the config file.
 6. Restart the game after changing settings.
 
 To remove it, close the game and disable or remove the ExpandedHordes plugin

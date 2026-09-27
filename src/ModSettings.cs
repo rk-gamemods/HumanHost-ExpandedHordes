@@ -1,4 +1,5 @@
 using BepInEx.Configuration;
+using System.Collections.Generic;
 
 namespace ExpandedHordes
 {
@@ -61,6 +62,17 @@ namespace ExpandedHordes
             ReportFileMiB = BindInt(config, "Diagnostics", "Report File MiB", 5, 1, 64,
                 "Start a new log file at this size, in MiB. Keeps the latest two files per log.");
         }
+
+        internal static IReadOnlyList<ConfigEntryBase> MenuEntries() => new ConfigEntryBase[]
+        {
+            Living, Total, Allowance,
+            LargeLimit, LargePercent, LargeBegin, BossLimit, BossPercent, BossBegin,
+            RunSpeedPercent,
+            RegularResistance, LargeResistance, BossResistance,
+            CorpseLimit, AttractionRadius,
+            DebugMode, Profiling, DetailedTimings, StartHordeHotkey,
+            HudScale, HudX, HudY, ReportFileMiB
+        };
 
         private static ConfigEntry<int> BindInt(ConfigFile config, string section, string key, int value, int min, int max, string description) =>
             config.Bind(section, key, value, new ConfigDescription(description, new AcceptableValueRange<int>(min, max)));

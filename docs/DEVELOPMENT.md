@@ -19,6 +19,7 @@ Unknown entries remain intact, and malformed files are left unchanged.
 | `Population`, `PopulationOverrides`, `HordeRules` | Total/living limits, vanilla quantity scaling and guarded restoration of owned fields. |
 | `CreatureCatalog`, `HordeSetup`, `SpecialRoster`, `HordeSpecialLimits` | Creature identities, initialization, fresh-spawn selection and living special counts. |
 | `HordeRunSpeed`, `HordeAttraction` | Temporary running boost and one-time lure. |
+| `ModMenuIntegration` | Optional in-game settings page using the loaded ModMenu API and existing BepInEx entries. |
 | `DamageResistance`, `CombatRules` | Health-loss reduction and category/corpse rules. |
 | `CorpseRetention` | Narrow adjustment of the native corpse-limit read. |
 | `PlacementLog`, `PerformanceMonitor`, `PerformanceRules` | Optional logs, selected method timings and bounded aggregates. |

@@ -8,6 +8,7 @@ using UnityEngine.SceneManagement;
 namespace ExpandedHordes
 {
     [BepInPlugin(Guid, ModIdentity.Name, Version)]
+    [BepInDependency("humanhost.modmenu", BepInDependency.DependencyFlags.SoftDependency)]
     public sealed class Plugin : BaseUnityPlugin
     {
         public const string Guid = ModIdentity.Guid;
@@ -20,6 +21,7 @@ namespace ExpandedHordes
             ModSettings.Bind(Config);
             DebugHordeTrigger.Initialize(Config);
             SettingsPersistence.Initialize(Config);
+            ModMenuIntegration.Register(this, ModSettings.MenuEntries(), Logger);
             FeatureRuntime.Install(Feature.Population, typeof(AiSetup), typeof(HordeAllowance), typeof(SpawnBudget));
             FeatureRuntime.Install(Feature.Catalog, typeof(HordeSetup));
             if (FeatureRuntime.Enabled(Feature.Catalog))
@@ -45,6 +47,7 @@ namespace ExpandedHordes
         private void OnDestroy()
         {
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
+            ModMenuIntegration.Unregister(this, Logger);
             DebugHordeTrigger.Stop();
             PlacementLog.Flush();
             PerformanceMonitor.Stop();

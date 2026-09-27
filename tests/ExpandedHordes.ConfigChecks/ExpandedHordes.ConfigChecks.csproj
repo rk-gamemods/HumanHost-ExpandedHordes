@@ -5,7 +5,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/AttractionSettings.cs" Link="AttractionSettings.cs" />
+    <Compile Include="../../src/ModSettings.cs" Link="ModSettings.cs" />
+    <Compile Include="../../src/SettingsOrder.cs" Link="SettingsOrder.cs" />
+    <Compile Include="../../src/ModMenuIntegration.cs" Link="ModMenuIntegration.cs" />
     <Reference Include="BepInEx" HintPath="$(BepInExCoreDir)/BepInEx.dll" />
+    <Reference Include="UnityEngine" HintPath="$(HumanHostManagedDir)/UnityEngine.dll" />
     <Reference Include="UnityEngine.CoreModule" HintPath="$(HumanHostManagedDir)/UnityEngine.CoreModule.dll" />
   </ItemGroup>
 </Project>

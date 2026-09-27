@@ -17,6 +17,13 @@ and use a disposable world. Record the game build, mod version and other mods.
   survive an upgrade; an already configured Attraction Range takes precedence.
   The upgrade checks run against BepInEx with
   `dotnet run --project tests/ExpandedHordes.ConfigChecks -c Release -p:HumanHostDir="<game directory>"`.
+- With ModMenu 0.3.1 installed, open the game's settings and confirm one
+  Expanded Hordes page with Population through Diagnostics in the documented
+  order. Change a supported setting, close the settings screen, restart, and
+  confirm the same value in the BepInEx config and external HHMM. Confirm Start
+  Horde Hotkey is read-only there and directs players to HHMM or the config.
+  Repeat without ModMenu: the plugin must load and file/HHMM editing must work.
+  Check the BepInEx log for new errors or a ModMenu registration warning.
 - Compare running at 100% and 125%. Check ordinary zombies, walking and attacks
   stay normal, and survivors lose the running boost when spawning ends or at dawn.
 - Temporarily set both extra-type region gates to 1 and chances to 40%. Check
