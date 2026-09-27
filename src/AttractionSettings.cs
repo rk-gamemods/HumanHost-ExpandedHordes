@@ -30,7 +30,7 @@ namespace ExpandedHordes
                     else if (orphans.TryGetValue(LegacyRadius, out string oldValue)) orphans[Range] = oldValue;
                 }
                 var range = config.Bind(Range, 250f, new ConfigDescription(
-                    "How far the horde-start lure reaches, in metres. Draws nearby zombies toward you, including from indoors or underground.",
+                    "How far the horde-start lure reaches, in metres. Nearby zombies that hear it move toward you.",
                     new AcceptableValueRange<float>(1f, 250f)));
                 config.Remove(LegacyRadius); config.Remove(LegacyHeight);
                 orphans.Remove(LegacyRadius); orphans.Remove(LegacyHeight);

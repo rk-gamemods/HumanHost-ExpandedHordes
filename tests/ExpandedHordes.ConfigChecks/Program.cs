@@ -30,7 +30,7 @@ internal static class Program
         var limits = freshRange.Description.AcceptableValues as AcceptableValueRange<float>;
         Check(limits != null && limits.MinValue == 1f && limits.MaxValue == 250f, "Range metadata is 1..250");
         Check(freshRange.Definition.Section == "Attraction" && freshRange.Definition.Key == "Attraction Range" &&
-            freshRange.Description.Description == "How far the horde-start lure reaches, in metres. Draws nearby zombies toward you, including from indoors or underground.",
+            freshRange.Description.Description == "How far the horde-start lure reaches, in metres. Nearby zombies that hear it move toward you.",
             "New setting uses the requested name and description");
         Check(File.ReadAllText(freshPath) == "" && fresh.SaveOnConfigSet, "Fresh Bind performs no file writes and restores auto-save policy");
 
