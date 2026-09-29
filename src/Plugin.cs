@@ -9,6 +9,8 @@ namespace ExpandedHordes
 {
     [BepInPlugin(Guid, ModIdentity.Name, Version)]
     [BepInDependency("humanhost.modmenu", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(AdminPanelMovementGuard.AdminOwner, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("rkgamemods.humanhost.zombierecovery", BepInDependency.DependencyFlags.SoftDependency)]
     public sealed class Plugin : BaseUnityPlugin
     {
         public const string Guid = ModIdentity.Guid;
@@ -33,8 +35,7 @@ namespace ExpandedHordes
             FeatureRuntime.Install(Feature.Movement, typeof(HordeRunSpeed));
             FeatureRuntime.Install(Feature.Corpses, typeof(CorpseRetention));
             FeatureRuntime.Install(Feature.DeathRecycling, typeof(HordeDeathRecycle), typeof(HordePoolReturn));
-            if (FeatureRuntime.Enabled(Feature.DeathRecycling))
-                Log.LogInfo("Horde death/recycling movement protection installed (event-driven; no periodic scans).");
+            AdminPanelCompatibility.Install();
             try { PerformanceMonitor.Start(Path.GetDirectoryName(Info.Location)); }
             catch (Exception ex) { Log.LogError("Diagnostics initialization failed: " + ex.GetType().Name); PerformanceMonitor.Stop(); }
             SceneManager.sceneUnloaded += OnSceneUnloaded;
@@ -49,6 +50,7 @@ namespace ExpandedHordes
 
         private void OnDestroy()
         {
+            AdminPanelCompatibility.Stop();
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
             ModMenuIntegration.Unregister(this, Logger);
             DebugHordeTrigger.Stop();

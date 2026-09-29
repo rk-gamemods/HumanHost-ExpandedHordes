@@ -31,8 +31,6 @@ namespace ExpandedHordes
                 {
                     // The GameObject is inactive, so this does not register AI or run OnEnable.
                     __instance.enabled = true;
-                    FeatureRuntime.WarnOnce("death-recycle-prevented",
-                        "Prevented a recycled horde zombie from retaining disabled movement after simultaneous deaths.");
                 }
             }
             catch (Exception ex)

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- BepInEx 5 ships Harmony/MonoMod versions that predate .NET 8. -->
+    <TargetFramework>net48</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/AdminPanelMovementGuard.cs" Link="AdminPanelMovementGuard.cs" />
+    <Reference Include="0Harmony" HintPath="$(BepInExCoreDir)/0Harmony.dll" />
+    <Reference Include="MonoMod.RuntimeDetour" HintPath="$(BepInExCoreDir)/MonoMod.RuntimeDetour.dll" />
+    <Reference Include="MonoMod.Utils" HintPath="$(BepInExCoreDir)/MonoMod.Utils.dll" />
+    <Reference Include="Mono.Cecil" HintPath="$(BepInExCoreDir)/Mono.Cecil.dll" />
+  </ItemGroup>
+</Project>
