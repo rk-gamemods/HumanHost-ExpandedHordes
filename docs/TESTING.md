@@ -3,7 +3,8 @@
 **Alpha with limited local play-testing.** Back up saves
 and use a disposable world. Record the game build, mod version and other mods.
 
-- Confirm the game loads the plugin and its log names Expanded Hordes 0.2.0.
+- Confirm the game loads the plugin and its log names Expanded Hordes 0.2.1.
+- Follow the [death/recycling checks](DEATH_RECYCLING.md#validation) during sustained combat.
   Check for errors or disabled-feature messages. Confirm HHMM shows the friendly
   name and current settings. Enable Debug Mode and restart to see the overlay
   and catalog/event details.

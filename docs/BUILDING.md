@@ -16,6 +16,7 @@ From the repository root:
 ```powershell
 dotnet build src/ExpandedHordes.csproj -c Release
 dotnet run --project tests/ExpandedHordes.Checks -c Release -- 'C:/Path/To/Human Host/Human Host_Data/Managed'
+dotnet run --project tests/ExpandedHordes.RecyclingChecks -c Release
 ```
 
 The installed-assembly checks also inspect `BepInEx/core/BepInEx.dll` in the

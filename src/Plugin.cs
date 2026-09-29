@@ -32,6 +32,9 @@ namespace ExpandedHordes
             FeatureRuntime.Install(Feature.Attraction, typeof(HordeStart));
             FeatureRuntime.Install(Feature.Movement, typeof(HordeRunSpeed));
             FeatureRuntime.Install(Feature.Corpses, typeof(CorpseRetention));
+            FeatureRuntime.Install(Feature.DeathRecycling, typeof(HordeDeathRecycle), typeof(HordePoolReturn));
+            if (FeatureRuntime.Enabled(Feature.DeathRecycling))
+                Log.LogInfo("Horde death/recycling movement protection installed (event-driven; no periodic scans).");
             try { PerformanceMonitor.Start(Path.GetDirectoryName(Info.Location)); }
             catch (Exception ex) { Log.LogError("Diagnostics initialization failed: " + ex.GetType().Name); PerformanceMonitor.Stop(); }
             SceneManager.sceneUnloaded += OnSceneUnloaded;

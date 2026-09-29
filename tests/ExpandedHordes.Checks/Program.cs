@@ -138,6 +138,10 @@ internal static class Program
             dll.Method("NPC_Horde_Mgr", "Restore_Horde_NPCs");
             dll.Method("NPC_Spawner_Mgr", "Back_Dead_NPC_To_Pool", "inputNPC");
             dll.MethodTypes("NPC_Spawner_Mgr", "Back_Dead_NPC_To_Pool", "Void", "C_Controller_Base");
+            dll.Method("NPC_Horde_Mgr", "Put_NPC_Back_To_Pool", "NPC_Obj", "forceBackPool");
+            dll.MethodTypes("NPC_Horde_Mgr", "Put_NPC_Back_To_Pool", "Void", "GameObject", "Boolean");
+            dll.FieldType("NPC_Horde_Mgr", "spawned_Horde_NPCs", "Dictionary`2<GameObject,Horde_NPC_Info>");
+            dll.FieldType("NPC_Spawner_Mgr", "_waitBackPoolDead_NPCs", "Dictionary`2<GameObject,C_Controller_Base>");
             dll.Fields("NPC_Horde_Mgr", "_ins", "_aliveHordeNPCs", "_G_Info");
             dll.Fields("NPC_Horde_Mgr", "_hordeSaveData", "_HordeZombieAll", "_ZombiesPioneerCount", "_ZombiesPerWaveAdd", "_MaxAllowActiveZombies", "_corHordeSpawn");
             dll.Fields("NPC_Spawner_Mgr", "NPC_Biomes");
@@ -184,6 +188,8 @@ internal static class Program
             dll.Method("C_Controller_Base", "Play_Anim_BaseLayer", "clip", "clipTran", "transitionTime", "speed");
             dll.Fields("C_Controller_Base", "curr_Move_F", "Pressed_FastMove", "Pressed_Move", "currCharState");
             dll.Fields("NPC_Input", "_npcSpawnSource", "_inRunning");
+            dll.Method("NPC_Input", "On_Char_Died");
+            dll.MethodTypes("NPC_Input", "On_Char_Died", "Void");
             dll.FieldType("NPC_Input", "is_Boss", "Boolean");
             dll.Fields("Creature_Mgr", "_IsDayTime");
             dll.MethodTypes("Creature_Mgr", "Is_Day_Time", "Boolean", "Single");

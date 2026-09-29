@@ -3,7 +3,7 @@
     <IsHumanHostMod>true</IsHumanHostMod>
     <AssemblyName>ExpandedHordes</AssemblyName>
     <RootNamespace>ExpandedHordes</RootNamespace>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
   </PropertyGroup>
   <ItemGroup>
     <HumanHostRef Include="UnityEngine.IMGUIModule" />

@@ -13,6 +13,10 @@ This repository contains only Expanded Hordes. Version 0.2.0 is available on
 [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3806576633).
 See the performance notes below for observations from local play-testing.
 
+The 0.2.1 development build adds [death/recycling movement protection](docs/DEATH_RECYCLING.md)
+for horde zombies after simultaneous kills. Gameplay verification of that guard
+is pending; it has not been published to Workshop.
+
 ## What it changes
 
 ### More zombies, on your schedule
