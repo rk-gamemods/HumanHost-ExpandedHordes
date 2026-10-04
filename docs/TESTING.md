@@ -28,6 +28,16 @@ and use a disposable world. Record the game build, mod version and other mods.
   Check the BepInEx log for new errors or a ModMenu registration warning.
 - Compare running at 100% and 125%. Check ordinary zombies, walking and attacks
   stay normal, and survivors lose the running boost when spawning ends or at dawn.
+- Compare Arrival at its defaults with 4 directions and 400% rate, restarting
+  after changes. Look for several visible approach directions in open terrain.
+  Check that the living target and total budget still hold and kills refill faster.
+- Test 4 directions near a coast or cliff. Blocked directions should give way
+  to the others without preventing the horde from spawning.
+- Save and reload mid-horde with Arrival enabled. Check restored positions,
+  remaining budget and future spawns. Repeat around dawn.
+- Compare frame times at 100% and 400%, with cold and warm zombie groups and
+  frequent kills. Check stutter and the shorter Horde Run Speed boost.
+- With Smart Zombies enabled, confirm its reinforcements still appear normally.
 - Temporarily set both extra-type region gates to 1 and chances to 40%. Check
   large types and bosses for appearance, movement, combat, death and loot.
   Random chances do not guarantee every type in a short test. Restore settings.

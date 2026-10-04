@@ -7,6 +7,7 @@ namespace ExpandedHordes
     internal static class ModSettings
     {
         internal static ConfigEntry<int> Total, Living, Allowance, LargeBegin, BossBegin, LargeLimit, BossLimit, RunSpeedPercent;
+        internal static ConfigEntry<int> SpawnRatePercent, ArrivalDirections;
         internal static ConfigEntry<float> AttractionRadius, LargePercent, BossPercent;
         internal static ConfigEntry<int> RegularResistance, LargeResistance, BossResistance, CorpseLimit;
         internal static ConfigEntry<bool> DebugMode, Profiling, DetailedTimings;
@@ -22,6 +23,11 @@ namespace ExpandedHordes
                 "Total spawn limit for one horde, including replacements. Multiplied by the game's Horde Quantity setting. Spawning stops at dawn.");
             Allowance = BindInt(config, "Population", "Shared AI Allowance", 90, 1, 1000,
                 "Limits how many horde and nearby zombies react to noise. Keep this at least as high as Living Horde Target.");
+
+            SpawnRatePercent = BindInt(config, "Arrival", "Horde Spawn Rate Percentage", 100, 100, 400,
+                "Percentage of the game's rate: one spawn every 0.1 s. 100 keeps that rate. Higher values spawn more zombies per second, using more CPU and possibly causing stutter; the cost depends on your machine. Fills the living target and replaces kills faster without adding zombies beyond Living Horde Target or Total Spawn Budget.");
+            ArrivalDirections = BindInt(config, "Arrival", "Horde Arrival Directions", 1, 1, 4,
+                "1 keeps the game's single direction. Spawns rotate evenly between directions at the game's spawn distance. 4 directions at 400% gives each direction the game's rate. Terrain can block a direction; its spawns then go to the others.");
 
             LargeLimit = BindInt(config, "Composition", "Large Zombie Living Limit", 5, 0, 500,
                 "Stops extra large zombie spawns when this many are alive in the horde. Vanilla spawns count toward the limit but aren't blocked. 0 = unlimited.");
@@ -66,6 +72,7 @@ namespace ExpandedHordes
         internal static IReadOnlyList<ConfigEntryBase> MenuEntries() => new ConfigEntryBase[]
         {
             Living, Total, Allowance,
+            SpawnRatePercent, ArrivalDirections,
             LargeLimit, LargePercent, LargeBegin, BossLimit, BossPercent, BossBegin,
             RunSpeedPercent,
             RegularResistance, LargeResistance, BossResistance,

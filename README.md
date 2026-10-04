@@ -43,12 +43,26 @@ For comparison, vanilla starts at 15 total zombies at 100% Horde Quantity, or
 120 at 800%, then adds 2 for each previous horde. Its simultaneous living limit
 reaches 60. The mod uses your selected budget instead of that per-horde growth.
 
+### Spawn rate and approach directions
+
+**Horde Spawn Rate Percentage** defaults to 100% and accepts 100-400%. It scales
+the game's rate of one spawn every 0.1 s. Higher values spawn more zombies per
+second, filling Living Horde Target and replacing kills faster. They do not add
+zombies beyond Living Horde Target or Total Spawn Budget. More spawns per second
+use more CPU and can cause stutter; the cost depends on your machine.
+
+**Horde Arrival Directions** defaults to 1 and accepts 1-4. At 1, the game's
+single direction stays unchanged. Spawns rotate evenly between directions at
+the game's spawn distance. With 4 directions at 400%, each direction gets the
+game's rate. Terrain can block a direction; its spawns then go to the others.
+
 ### Faster runners and tougher enemies
 
 Running speed defaults to **100%**, the game's normal speed, and accepts
 25-150%. Changes apply only while nighttime horde spawning is active. Normal
 speed returns when spawning finishes or dawn arrives, whichever comes first. Walking and attacks
-keep their normal speed; walking zombies are not forced to run.
+keep their normal speed; walking zombies are not forced to run. A higher
+Horde Spawn Rate Percentage finishes spawning sooner, so the boost also ends sooner.
 
 Damage resistance makes horde zombies harder to kill without increasing their
 maximum health or health-based kill XP:
@@ -110,7 +124,7 @@ guarantee that bodies form solid, climbable piles. Removed corpses can lose loot
 
 ## Settings at a glance
 
-Settings are grouped in this order: Population, Composition, Movement,
+Settings are grouped in this order: Population, Arrival, Composition, Movement,
 Resistance, Corpses, Attraction, Diagnostics. Diagnostics starts with Debug
 Mode, Performance Profiling and Detailed Method Timings. Profiling can run
 with Debug Mode off; detailed timings require profiling.
@@ -120,6 +134,8 @@ with Debug Mode off; detailed timings require profiling.
 | Total Spawn Budget | 1,000 | 1-50,000 before Horde Quantity |
 | Living Horde Target | 75 | 1-500 |
 | Shared AI Allowance | 90 | 1-1,000 |
+| Horde Spawn Rate Percentage | 100% | 100-400% |
+| Horde Arrival Directions | 1 | 1-4 |
 | Horde Run Speed Percentage | 100% | 25-150% |
 | Regular Zombie Resistance | 0% | 0-95% |
 | Large Zombie Resistance | 0% | 0-95% |
