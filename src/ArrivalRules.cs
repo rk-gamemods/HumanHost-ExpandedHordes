@@ -5,6 +5,8 @@ namespace ExpandedHordes
     internal static class ArrivalRules
     {
         internal const float NativeWaitSeconds = 0.1f;
+        internal const float FailureSentinelY = -10000f;
+        internal const float MinimumDistanceSquared = 1600f;
         internal static float WaitSeconds(int percentage) => NativeWaitSeconds * 100 / Math.Max(100, Math.Min(400, percentage));
         internal static int Directions(int directions) => Math.Max(1, Math.Min(4, directions));
         internal static float SectorAngle(int sector, int directions) => sector * 360f / Directions(directions);
@@ -20,7 +22,7 @@ namespace ExpandedHordes
         }
 
         internal static bool PlacementFailed(float y, float offsetX, float offsetZ) =>
-            y == -10000f || offsetX * offsetX + offsetZ * offsetZ < 1600f;
+            y == FailureSentinelY || offsetX * offsetX + offsetZ * offsetZ < MinimumDistanceSquared;
     }
 
     internal sealed class ArrivalSectors

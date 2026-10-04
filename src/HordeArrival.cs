@@ -11,6 +11,7 @@ namespace ExpandedHordes
     internal static class HordeArrival
     {
         internal static MethodInfo SpawnMethod, PlacementMethod;
+        internal static Type IteratorType;
         internal static bool RateEnabled, DirectionsEnabled;
         internal static int DirectionCount;
         private static AccessTools.FieldRef<WaitForSeconds, float> seconds;
@@ -32,6 +33,7 @@ namespace ExpandedHordes
                     throw new MissingMethodException("Spawn_Horde_NPCs(): IEnumerator");
                 MethodInfo moveNext = AccessTools.EnumeratorMoveNext(SpawnMethod);
                 if (moveNext == null) throw new MissingMethodException("Spawn_Horde_NPCs compiler-generated MoveNext");
+                IteratorType = moveNext.DeclaringType;
                 // The installed Harmony references mscorlib's ILGenerator in
                 // this signature. Invoke its reader without adding that legacy
                 // assembly as a compile dependency to our netstandard target.
@@ -50,7 +52,7 @@ namespace ExpandedHordes
             if (rate != 100 && !RateEnabled)
                 FeatureRuntime.WarnOnce("arrival-rate-shape", "Arrival rate disabled: Spawn_Horde_NPCs.MoveNext did not match one WaitForSeconds(float) fed by ldc.r4 0.1." + failure);
             if (directions != 1 && !DirectionsEnabled)
-                FeatureRuntime.WarnOnce("arrival-directions-shape", "Arrival directions disabled: GetValidSpawnPosition signature or the two MoveNext calls with attempts 1000 and 100 did not match." + failure);
+                FeatureRuntime.WarnOnce("arrival-directions-shape", "Arrival directions disabled: GetValidSpawnPosition signature, the two MoveNext calls with attempts 1000 and 100, or native rejection constants -10000 and 1600 did not match." + failure);
             if (!RateEnabled && !DirectionsEnabled) return;
 
             DirectionCount = ArrivalRules.Directions(directions);
@@ -136,8 +138,13 @@ namespace ExpandedHordes
         private static MethodBase TargetMethod() => HordeArrival.SpawnMethod;
         private static void Postfix(NPC_Horde_Mgr __instance, ref IEnumerator __result)
         {
-            if (FeatureRuntime.Enabled(Feature.Arrival) && __result != null)
-                __result = new HordeArrival.NativeIterator(__instance, __result);
+            if (!FeatureRuntime.Enabled(Feature.Arrival) || __result == null) return;
+            if (__result.GetType() != HordeArrival.IteratorType)
+            {
+                FeatureRuntime.WarnOnce("arrival-replaced-iterator", "Another mod replaced the horde spawn iterator; Arrival is inactive for it.");
+                return;
+            }
+            __result = new HordeArrival.NativeIterator(__instance, __result);
         }
     }
 

@@ -38,10 +38,18 @@ namespace ExpandedHordes
         internal static ArrivalShape Read(IReadOnlyList<ArrivalInstruction> instructions, ArrivalMethod placement)
         {
             int waits = 0, nativeWaits = 0, calls = 0, anchors = 0, zombies = 0;
+            bool inRejection = false, sentinelMatches = false, distanceMatches = false;
             ArrivalInstruction previous = default;
             foreach (var instruction in instructions)
             {
                 if (instruction.Code == OpCodes.Nop) continue;
+                // The anchor also uses the sentinel. Only the rejection rule
+                // after the per-zombie placement call protects lane bookkeeping.
+                if (inRejection && instruction.Code == OpCodes.Ldc_R4 && instruction.Operand is float value)
+                {
+                    if (value == ArrivalRules.FailureSentinelY) sentinelMatches = true;
+                    if (value == ArrivalRules.MinimumDistanceSquared) distanceMatches = true;
+                }
                 if (instruction.Operand is ArrivalMethod method)
                 {
                     if (instruction.Code == OpCodes.Newobj && method.WaitConstructor)
@@ -55,13 +63,20 @@ namespace ExpandedHordes
                     {
                         calls++;
                         if (method.PlacementSignature && Integer(previous, 1000)) anchors++;
-                        if (method.PlacementSignature && Integer(previous, 100)) zombies++;
+                        if (method.PlacementSignature && Integer(previous, 100))
+                        {
+                            zombies++;
+                            inRejection = true;
+                        }
                     }
+                    if ((instruction.Code == OpCodes.Call || instruction.Code == OpCodes.Callvirt) &&
+                        method.Owner == "NPC_Horde_Mgr" && method.Name == "Spawn_Horde_NPC") inRejection = false;
                 }
                 previous = instruction;
             }
             return new ArrivalShape(waits == 1 && nativeWaits == 1,
-                placement != null && placement.PlacementSignature && calls == 2 && anchors == 1 && zombies == 1);
+                placement != null && placement.PlacementSignature && calls == 2 && anchors == 1 && zombies == 1 &&
+                sentinelMatches && distanceMatches);
         }
 
         private static bool Integer(ArrivalInstruction instruction, int expected) =>

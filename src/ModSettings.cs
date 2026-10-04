@@ -25,9 +25,9 @@ namespace ExpandedHordes
                 "Limits how many horde and nearby zombies react to noise. Keep this at least as high as Living Horde Target.");
 
             SpawnRatePercent = BindInt(config, "Arrival", "Horde Spawn Rate Percentage", 100, 100, 400,
-                "Percentage of the game's rate: one spawn every 0.1 s. 100 keeps that rate. Higher values spawn more zombies per second, using more CPU and possibly causing stutter; the cost depends on your machine. Fills the living target and replaces kills faster without adding zombies beyond Living Horde Target or Total Spawn Budget.");
+                "Percentage of the game's spawn pace, one spawn request every 0.1 s. 100 keeps that pace. Higher values shorten the wait between requests, so the horde can fill Living Horde Target and replace kills sooner; loading, frame rate and terrain still limit the real rate. It never adds zombies beyond Living Horde Target or Total Spawn Budget. More spawns per second use more CPU and can cause stutter; the cost depends on your machine.");
             ArrivalDirections = BindInt(config, "Arrival", "Horde Arrival Directions", 1, 1, 4,
-                "1 keeps the game's single direction. Spawns rotate evenly between directions at the game's spawn distance. 4 directions at 400% gives each direction the game's rate. Terrain can block a direction; its spawns then go to the others.");
+                "1 keeps the game's single direction. Spawn requests take turns between evenly spaced directions at the game's spawn distance, so 4 directions at 400% give each direction about the game's pace. Terrain can block a direction; its spawns then go to the others.");
 
             LargeLimit = BindInt(config, "Composition", "Large Zombie Living Limit", 5, 0, 500,
                 "Stops extra large zombie spawns when this many are alive in the horde. Vanilla spawns count toward the limit but aren't blocked. 0 = unlimited.");

@@ -45,24 +45,27 @@ reaches 60. The mod uses your selected budget instead of that per-horde growth.
 
 ### Spawn rate and approach directions
 
-**Horde Spawn Rate Percentage** defaults to 100% and accepts 100-400%. It scales
-the game's rate of one spawn every 0.1 s. Higher values spawn more zombies per
-second, filling Living Horde Target and replacing kills faster. They do not add
-zombies beyond Living Horde Target or Total Spawn Budget. More spawns per second
-use more CPU and can cause stutter; the cost depends on your machine.
+**Horde Spawn Rate Percentage** defaults to 100% and accepts 100-400%.
+Percentage of the game's spawn pace, one spawn request every 0.1 s. 100 keeps
+that pace. Higher values shorten the wait between requests, so the horde can
+fill Living Horde Target and replace kills sooner; loading, frame rate and
+terrain still limit the real rate. It never adds zombies beyond Living Horde
+Target or Total Spawn Budget. More spawns per second use more CPU and can cause
+stutter; the cost depends on your machine.
 
-**Horde Arrival Directions** defaults to 1 and accepts 1-4. At 1, the game's
-single direction stays unchanged. Spawns rotate evenly between directions at
-the game's spawn distance. With 4 directions at 400%, each direction gets the
-game's rate. Terrain can block a direction; its spawns then go to the others.
+**Horde Arrival Directions** defaults to 1 and accepts 1-4.
+1 keeps the game's single direction. Spawn requests take turns between evenly
+spaced directions at the game's spawn distance, so 4 directions at 400% give
+each direction about the game's pace. Terrain can block a direction; its spawns
+then go to the others.
 
 ### Faster runners and tougher enemies
 
 Running speed defaults to **100%**, the game's normal speed, and accepts
 25-150%. Changes apply only while nighttime horde spawning is active. Normal
 speed returns when spawning finishes or dawn arrives, whichever comes first. Walking and attacks
-keep their normal speed; walking zombies are not forced to run. A higher
-Horde Spawn Rate Percentage finishes spawning sooner, so the boost also ends sooner.
+keep their normal speed; walking zombies are not forced to run. A higher Horde
+Spawn Rate Percentage can finish spawning sooner, which also ends the boost sooner.
 
 Damage resistance makes horde zombies harder to kill without increasing their
 maximum health or health-based kill XP:

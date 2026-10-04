@@ -25,7 +25,7 @@ internal static partial class Program
             var instructions = ReadArrivalInstructions(moveNext);
             var shape = ArrivalShape.Read(instructions, placementShape);
             Check(shape.WaitMatches, "Installed native iterator has one WaitForSeconds(float) fed by ldc.r4 0.1");
-            Check(shape.PlacementMatches, "Installed native iterator has exactly two placement calls with attempts 1000 and 100");
+            Check(shape.PlacementMatches, "Installed native iterator has exactly two placement calls with attempts 1000 and 100 and native rejection constants -10000 and 1600");
             Check(shape.RateEnabled(400) && shape.DirectionsEnabled(4), "Verified installed shape enables both requested arrival options");
             Check(!shape.RateEnabled(100) && !shape.DirectionsEnabled(1), "Default settings enable no arrival hooks");
 
@@ -43,6 +43,30 @@ internal static partial class Program
             badAttempts[zombieIndex] = new ArrivalInstruction(OpCodes.Ldc_I4, 99);
             var changedPlacement = ArrivalShape.Read(badAttempts, placementShape);
             Check(changedPlacement.RateEnabled(400) && !changedPlacement.DirectionsEnabled(4), "Mismatched installed placement disables directions while retaining rate");
+
+            var badDistance = instructions.ToArray();
+            int distanceIndex = Array.FindIndex(badDistance, i => i.Code == OpCodes.Ldc_R4 &&
+                i.Operand is float distance && distance == ArrivalRules.MinimumDistanceSquared);
+            Check(distanceIndex >= 0, "Negative distance fixture starts from the installed rejection constant 1600");
+            badDistance[distanceIndex] = new ArrivalInstruction(OpCodes.Ldc_R4, 3600f);
+            var changedDistance = ArrivalShape.Read(badDistance, placementShape);
+            Check(changedDistance.RateEnabled(400) && !changedDistance.DirectionsEnabled(4),
+                "Changing native rejection distance from 1600 to 3600 disables directions only");
+
+            var badSentinel = instructions.ToArray();
+            int placementIndex = Array.FindLastIndex(badSentinel, i =>
+                (i.Code == OpCodes.Call || i.Code == OpCodes.Callvirt) && i.Operand is ArrivalMethod method && method.PlacementSignature);
+            int sentinelIndex = Array.FindIndex(badSentinel, placementIndex + 1, i => i.Code == OpCodes.Ldc_R4 &&
+                i.Operand is float sentinel && sentinel == ArrivalRules.FailureSentinelY);
+            Check(placementIndex >= 0 && sentinelIndex > placementIndex &&
+                badSentinel.Take(placementIndex).Any(i => i.Code == OpCodes.Ldc_R4 &&
+                    i.Operand is float sentinel && sentinel == ArrivalRules.FailureSentinelY),
+                "Negative sentinel fixture changes the per-zombie rejection constant while preserving the anchor sentinel");
+            badSentinel[sentinelIndex] = new ArrivalInstruction(OpCodes.Ldc_R4, -20000f);
+            var changedSentinel = ArrivalShape.Read(badSentinel, placementShape);
+            Check(changedSentinel.RateEnabled(400) && !changedSentinel.DirectionsEnabled(4),
+                "Changing the native rejection sentinel disables directions only despite the unchanged anchor sentinel");
+
             var wrongReturn = new ArrivalMethod("NPC_Horde_Mgr", "GetValidSpawnPosition", "Void", false,
                 "Vector3", "Single", "Single", "Int32");
             Check(!ArrivalShape.Read(instructions, wrongReturn).DirectionsEnabled(4), "Changed placement return type disables directions");
