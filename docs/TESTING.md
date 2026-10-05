@@ -13,6 +13,7 @@ and use a disposable world. Record the game build, mod version and other mods.
   allow replacements and no new spawns arrive after the budget is exhausted.
 - Check the game's disabled-horde and every-N-nights choices. With budget left,
   spawning should end around native dawn, allowing the game's polling delay.
+- At night, check unfocused living horde zombies are re-sent toward the player after about 10 seconds; pause, dawn, player death, ragdolls and other mods' vetoes must be respected.
 - Check Attraction shows only Attraction Range. Test nearby zombies at horde
   start in open terrain and near obstacles. Existing custom range values must
   survive an upgrade; an already configured Attraction Range takes precedence.
