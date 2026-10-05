@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using BepInEx.Bootstrap;
+using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
 
@@ -9,7 +11,8 @@ namespace ExpandedHordes
     {
         private static AccessTools.FieldRef<NPC_Horde_Mgr, Dictionary<GameObject, NPC_Horde_Mgr.Horde_NPC_Info>> alive;
         private static AccessTools.FieldRef<AI_Agen_Mgr, Coroutine> sorting;
-        private static readonly Dictionary<GameObject, int> idle = new Dictionary<GameObject, int>();
+        private static readonly Dictionary<GameObject, RefocusSample> idle = new Dictionary<GameObject, RefocusSample>();
+        private static readonly RefocusAdminSetting adminSetting = new RefocusAdminSetting();
         private static readonly List<KeyValuePair<GameObject, NPC_Horde_Mgr.Horde_NPC_Info>> members =
             new List<KeyValuePair<GameObject, NPC_Horde_Mgr.Horde_NPC_Info>>();
         private static readonly List<GameObject> removed = new List<GameObject>();
@@ -20,6 +23,7 @@ namespace ExpandedHordes
         {
             alive = AccessTools.FieldRefAccess<NPC_Horde_Mgr, Dictionary<GameObject, NPC_Horde_Mgr.Horde_NPC_Info>>("_aliveHordeNPCs");
             sorting = AccessTools.FieldRefAccess<AI_Agen_Mgr, Coroutine>("_InWaitSorting");
+            AdminIgnoringPlayer(); // Resolve the optional config once at installation, not during a tick.
             Clear();
         }
 
@@ -33,6 +37,15 @@ namespace ExpandedHordes
         }
 
         internal static void Forget(GameObject member) { if (!ReferenceEquals(member, null)) idle.Remove(member); }
+
+        private static bool AdminIgnoringPlayer()
+        {
+            ConfigFile config = null;
+            if (!adminSetting.Resolved && Chainloader.PluginInfos.TryGetValue("humanhost.admin.panel", out var plugin)
+                && plugin.Instance)
+                config = plugin.Instance.Config;
+            return adminSetting.IsOn(config);
+        }
 
         internal static void Update()
         {
@@ -61,7 +74,7 @@ namespace ExpandedHordes
             removed.Clear();
             if (!RefocusRules.TickAllowed(!creatures._IsDayTime, living.Count,
                 player && player.char_Status && player.char_Status._CurrHP > 0f,
-                G_Save.isQuit, sorting(ai) != null)) return;
+                G_Save.isQuit, sorting(ai) != null, AdminIgnoringPlayer())) return;
 
             // A broadcast can cause another mod to remove membership. Reuse a snapshot
             // and recheck identity before touching each member, without LINQ allocations.
@@ -73,16 +86,17 @@ namespace ExpandedHordes
                 var member = members[index];
                 if (member.Key && living.TryGetValue(member.Key, out var current) && ReferenceEquals(current, member.Value))
                 {
-                    idle.TryGetValue(member.Key, out int ticks);
+                    idle.TryGetValue(member.Key, out var sample);
                     bool registered = ai._allZombies2Agent.TryGetValue(member.Key, out var agent) && agent;
                     NPC_Input npc = registered ? agent._NPC_Input : null;
-                    ticks = RefocusRules.IdleTicks(ticks,
+                    Vector3 position = member.Key.transform.position;
+                    RefocusRules.Observe(ref sample,
                         registered && agent.enabled && npc && npc.enabled && member.Key.activeInHierarchy,
                         npc && npc.char_Status ? npc.char_Status._CurrHP : 0f,
-                        npc && npc._isFallGround, registered && (agent._focusTrans || agent._focusCollider));
-                    bool send = RefocusRules.TryRefocus(ref ticks, ref calls);
-                    if (ticks == 0) idle.Remove(member.Key);
-                    else idle[member.Key] = ticks;
+                        npc && npc._isFallGround, registered && (agent._focusTrans || agent._focusCollider), position.x, position.z);
+                    bool send = RefocusRules.TryRefocus(ref sample.IdleTicks, ref calls);
+                    // Keep the position baseline even when grace resets or a call is vetoed.
+                    idle[member.Key] = sample;
                     if (send)
                     {
                         cursor = RefocusRules.NextIndex(index, count);

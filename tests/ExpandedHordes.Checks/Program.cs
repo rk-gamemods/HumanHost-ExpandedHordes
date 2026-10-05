@@ -124,6 +124,12 @@ internal static class Program
         {
             dll.Method("Chainloader", "get_DependencyErrors");
             dll.Method("Chainloader", "get_PluginInfos");
+            dll.MethodTypes("PluginInfo", "get_Instance", "BaseUnityPlugin");
+            dll.MethodTypes("BaseUnityPlugin", "get_Config", "ConfigFile");
+            dll.MethodTypes("ConfigFile", "GetEnumerator", "IEnumerator`1<KeyValuePair`2<ConfigDefinition,ConfigEntryBase>>");
+            dll.MethodTypes("ConfigDefinition", "get_Key", "String");
+            dll.MethodTypes("ConfigDefinition", "get_Section", "String");
+            dll.MethodTypes("ConfigEntry`1", "get_Value", "!0");
         }
         using (var dll = new AssemblyContract(Path.Combine(args[0], "Terrain.dll")))
         {
@@ -218,6 +224,8 @@ internal static class Program
             dll.MethodTypes("Time", "get_time", "Single");
             dll.MethodTypes("Behaviour", "get_enabled", "Boolean");
             dll.MethodTypes("GameObject", "get_activeInHierarchy", "Boolean");
+            dll.MethodTypes("GameObject", "get_transform", "Transform");
+            dll.MethodTypes("Transform", "get_position", "Vector3");
             dll.MethodTypes("Vector3", "get_zero", "Vector3");
         }
         Console.WriteLine($"PASS: {assertions} policy and installed-assembly contract assertions. Unity runtime behavior is not tested here.");

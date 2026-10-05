@@ -2,11 +2,18 @@ using System;
 
 namespace ExpandedHordes
 {
+    internal struct RefocusSample
+    {
+        internal int IdleTicks;
+        internal float X, Z;
+        internal bool HasPosition;
+    }
+
     // Policy only; the runtime supplies live membership and makes native calls.
     internal static class RefocusRules
     {
         internal const float Interval = 5f;
-        internal const int GraceTicks = 2;
+        internal const int GraceTicks = 9;
         internal const int CallLimit = 16;
 
         internal static bool TickDue(float scaledTime, ref float nextTick)
@@ -17,10 +24,20 @@ namespace ExpandedHordes
         }
 
         internal static bool TickAllowed(bool night, int livingCount, bool playerAlive,
-            bool quitting, bool sorting) => night && livingCount > 0 && playerAlive && !quitting && !sorting;
+            bool quitting, bool sorting, bool adminIgnore) =>
+            night && livingCount > 0 && playerAlive && !quitting && !sorting && !adminIgnore;
 
-        internal static int IdleTicks(int previous, bool active, float hp, bool ragdolled, bool hasFocus) =>
-            active && hp > 0f && !ragdolled && !hasFocus ? Math.Min(GraceTicks, previous + 1) : 0;
+        internal static void Observe(ref RefocusSample sample, bool active, float hp,
+            bool ragdolled, bool hasFocus, float x, float z)
+        {
+            float dx = x - sample.X, dz = z - sample.Z;
+            bool stationary = sample.HasPosition && dx * dx + dz * dz < 1f;
+            sample.IdleTicks = active && hp > 0f && !ragdolled && !hasFocus && stationary
+                ? Math.Min(GraceTicks, sample.IdleTicks + 1) : 0;
+            sample.X = x;
+            sample.Z = z;
+            sample.HasPosition = true;
+        }
 
         internal static bool TryRefocus(ref int idleTicks, ref int calls)
         {

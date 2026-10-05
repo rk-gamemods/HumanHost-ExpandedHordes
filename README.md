@@ -95,7 +95,7 @@ At horde start, the mod automatically tries to draw nearby zombies toward you.
 and only attracts zombies already nearby. Walls and normal pursuit rules can
 still prevent a response.
 
-Idle horde zombies are re-sent toward the player after about 10 seconds.
+Idle horde zombies are re-sent toward the player after about 45 seconds standing still.
 
 ### More bodies left behind
 
