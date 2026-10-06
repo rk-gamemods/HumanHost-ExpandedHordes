@@ -16,13 +16,15 @@ internal static class SettingsOrderChecks
             "[Corpses]\nRetained Corpse Limit = 300\n\n" +
             "[Resistance]\nBoss Resistance = 33\nLarge Zombie Resistance = 22\nRegular Zombie Resistance = 11\n\n" +
             "[Movement]\nHorde Run Speed Percentage = 100\n\n" +
+            "[Arrival]\nHorde Arrival Directions = 4\nHorde Spawn Rate Percentage = 400\n\n" +
             "[Composition]\nExtra Boss Zombie Begin Biome = 17\nExtra Boss Zombie Percentage = 0.25\nBoss Zombie Living Limit = 2\n" +
             "Extra Large Zombie Begin Biome = 11\nExtra Large Zombie Percentage = 0.5\nLarge Zombie Living Limit = 5\n\n" +
             "[Future Second]\nSecond = retained\n";
         string sorted = SettingsOrder.Reorder(source);
         check(sorted.StartsWith(header, StringComparison.Ordinal), "Saved config preserves the full plugin identity header");
         Ordered(check, sorted, "Sections follow gameplay-to-diagnostics order, with unknown sections stable at end",
-            "[Population]", "[Composition]", "[Movement]", "[Resistance]", "[Corpses]", "[Attraction]", "[Diagnostics]", "[Future First]", "[Future Second]");
+            "[Population]", "[Arrival]", "[Composition]", "[Movement]", "[Resistance]", "[Corpses]", "[Attraction]", "[Diagnostics]", "[Future First]", "[Future Second]");
+        Ordered(check, sorted, "Arrival orders rate before directions", "Horde Spawn Rate Percentage = 400", "Horde Arrival Directions = 4");
         Ordered(check, sorted, "Population values follow target, budget, allowance, then stable unknown entries",
             "Living Horde Target = 123", "Total Spawn Budget = 1234", "Shared AI Allowance = 200", "Unknown A = keep", "Unknown B = also keep");
         Ordered(check, sorted, "Composition keeps large and boss settings together",
@@ -36,7 +38,7 @@ internal static class SettingsOrderChecks
             sorted.Contains("## living description\nLiving Horde Target = 123") &&
             sorted.Contains("## debug description\n# Default value: false\nDebug Mode = false") &&
             sorted.Contains("; radius comment\nAttraction Range = 249.5"), "Descriptions, type/range metadata and user comments move with their exact values");
-        check(sorted.Contains("Unknown B = also keep\n# section footer\n\n[Composition]") &&
+        check(sorted.Contains("Unknown B = also keep\n# section footer\n\n[Arrival]") &&
             sorted.Contains("[Future First]\n# future first metadata\nZ = a=b\n\n[Future Second]"),
             "Unknown section contents, embedded equals and trailing section comments are preserved");
         check(source.Split('\n').OrderBy(s => s, StringComparer.Ordinal).SequenceEqual(sorted.Split('\n').OrderBy(s => s, StringComparer.Ordinal)),

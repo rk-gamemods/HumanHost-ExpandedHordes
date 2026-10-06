@@ -5,6 +5,23 @@ own death callback. It prevents a confirmed route to living zombies with
 disabled movement and gravity updates. It does not move zombies, change health,
 edit saves, or repair every possible cause of airborne characters.
 
+## Status: fixed in the game
+
+Human Host fixed this sequence in Steam build 25606549. That build still
+reports version 0.8.316.
+
+- **The change:** the overflow branch of
+  `NPC_Spawner_Mgr.Delay_Back_Dead_NPC_To_Pool` now yields once before it
+  breaks. The pool return therefore runs after `NPC_Input.On_Char_Died`
+  disables the controller.
+- **Checked unchanged** in builds 25675256 (0.8.318) and 25710579 (0.8.3181).
+- **The guard is kept as a defence.** It acts only when it sees a pool reset
+  inside the same death call, so on fixed builds it changes nothing. Its cost
+  per death is a short list check. It applies again if the game ever returns to
+  the old order.
+- **If airborne zombies return:** check whether that branch still yields before
+  `break`.
+
 ## Native sequence
 
 Inspected against Human Host 0.8.316:

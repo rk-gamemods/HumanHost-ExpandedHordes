@@ -9,10 +9,11 @@ namespace ExpandedHordes
     internal static class SettingsOrder
     {
         private static readonly string[] Sections =
-            { "Population", "Composition", "Movement", "Resistance", "Corpses", "Attraction", "Diagnostics" };
+            { "Population", "Arrival", "Composition", "Movement", "Resistance", "Corpses", "Attraction", "Diagnostics" };
         private static readonly string[][] Keys =
         {
             new[] { "Living Horde Target", "Total Spawn Budget", "Shared AI Allowance" },
+            new[] { "Horde Spawn Rate Percentage", "Horde Arrival Directions" },
             new[] { "Large Zombie Living Limit", "Extra Large Zombie Percentage", "Extra Large Zombie Begin Biome",
                 "Boss Zombie Living Limit", "Extra Boss Zombie Percentage", "Extra Boss Zombie Begin Biome" },
             new[] { "Horde Run Speed Percentage" },

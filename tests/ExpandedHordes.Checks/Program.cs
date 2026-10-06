@@ -9,7 +9,7 @@ using System.Reflection;
 using System.Collections.Immutable;
 using ExpandedHordes;
 
-internal static class Program
+internal static partial class Program
 {
     private static int assertions;
     private static void Check(bool condition, string message)
@@ -104,7 +104,9 @@ internal static class Program
         Check(HordeRules.Category(7900, 11, 11, 11, 40, 40) == 1, "Maximum extra chances cover 80 slots");
         Check(HordeRules.Category(8000, 11, 11, 11, 40, 40) == 0, "Maximum chances leave 20 native slots");
 
+        RefocusChecks.Run(Check);
         LivingSpecialChecks.Run(Check);
+        ArrivalChecks.Run(Check);
         SettingsOrderChecks.Run(Check);
         TelemetryChecks.Run(Check);
         DeathCategoryChecks.Run(Check);
@@ -123,9 +125,16 @@ internal static class Program
         {
             dll.Method("Chainloader", "get_DependencyErrors");
             dll.Method("Chainloader", "get_PluginInfos");
+            dll.MethodTypes("PluginInfo", "get_Instance", "BaseUnityPlugin");
+            dll.MethodTypes("BaseUnityPlugin", "get_Config", "ConfigFile");
+            dll.MethodTypes("ConfigFile", "GetEnumerator", "IEnumerator`1<KeyValuePair`2<ConfigDefinition,ConfigEntryBase>>");
+            dll.MethodTypes("ConfigDefinition", "get_Key", "String");
+            dll.MethodTypes("ConfigDefinition", "get_Section", "String");
+            dll.MethodTypes("ConfigEntry`1", "get_Value", "!0");
         }
         using (var dll = new AssemblyContract(Path.Combine(args[0], "Terrain.dll")))
         {
+            dll.Arrival();
             dll.Method("NPC_Horde_Mgr", "_Start");
             dll.Method("NPC_Horde_Mgr", "Get_Plan_To_Spawn_Count");
             dll.Method("NPC_Horde_Mgr", "StartHordeEvent", "isLoad");
@@ -135,6 +144,10 @@ internal static class Program
             dll.Method("NPC_Horde_Mgr", "Save_Horde_Data_To_Disk");
             dll.Method("NPC_Horde_Mgr", "Add_AliveHordeNPC", "npcObj", "npcInfo");
             dll.Method("NPC_Horde_Mgr", "Remove_AliveHordeNPC", "npcObj");
+            dll.MethodTypes("NPC_Horde_Mgr", "Remove_AliveHordeNPC", "Void", "GameObject");
+            dll.MethodTypes("NPC_Horde_Mgr", "get_ins", "NPC_Horde_Mgr");
+            dll.Method("NPC_Horde_Mgr", "Broadcast_Npc_Focus_Player_Event", "npcObj", "npcSpawnPos", "allowInitSpawnPos");
+            dll.MethodTypes("NPC_Horde_Mgr", "Broadcast_Npc_Focus_Player_Event", "Void", "GameObject", "Vector3", "Boolean");
             dll.Method("NPC_Horde_Mgr", "Restore_Horde_NPCs");
             dll.Method("NPC_Spawner_Mgr", "Back_Dead_NPC_To_Pool", "inputNPC");
             dll.MethodTypes("NPC_Spawner_Mgr", "Back_Dead_NPC_To_Pool", "Void", "C_Controller_Base");
@@ -171,6 +184,12 @@ internal static class Program
             dll.Method("AI_Agen_Mgr", "MyStart");
             dll.Method("AI_Agen_Mgr", "SetHorde_MaxAllowActiveZombies");
             dll.Fields("AI_Agen_Mgr", "_InWaitSorting", "_MaxAllowActiveZombies");
+            dll.MethodTypes("AI_Agen_Mgr", "get_ins", "AI_Agen_Mgr");
+            dll.FieldType("AI_Agen_Mgr", "_InWaitSorting", "Coroutine");
+            dll.FieldType("AI_Agen_Mgr", "_allZombies2Agent", "Dictionary`2<GameObject,Zombie_Agent>");
+            dll.FieldType("AI_Agent", "_NPC_Input", "NPC_Input");
+            dll.FieldType("AI_Agent", "_focusTrans", "Transform");
+            dll.FieldType("AI_Agent", "_focusCollider", "Collider");
         }
         using (var dll = new AssemblyContract(Path.Combine(args[0], "Creature.dll")))
         {
@@ -192,13 +211,30 @@ internal static class Program
             dll.MethodTypes("NPC_Input", "On_Char_Died", "Void");
             dll.FieldType("NPC_Input", "is_Boss", "Boolean");
             dll.Fields("Creature_Mgr", "_IsDayTime");
+            dll.MethodTypes("Creature_Mgr", "get_ins", "Creature_Mgr");
+            dll.FieldType("Creature_Mgr", "_IsDayTime", "Boolean");
+            dll.FieldType("Player_Input", "ins", "Player_Input", true);
+            dll.FieldType("C_Controller_Base", "char_Status", "Char_Status");
+            dll.FieldType("C_Controller_Base", "_isFallGround", "Boolean");
+            dll.MethodTypes("Char_Status", "get__CurrHP", "Single");
             dll.MethodTypes("Creature_Mgr", "Is_Day_Time", "Boolean", "Single");
+        }
+        using (var dll = new AssemblyContract(Path.Combine(args[0], "G_Save.dll")))
+            dll.FieldType("G_Save", "isQuit", "Boolean", true);
+        using (var dll = new AssemblyContract(Path.Combine(args[0], "UnityEngine.CoreModule.dll")))
+        {
+            dll.MethodTypes("Time", "get_time", "Single");
+            dll.MethodTypes("Behaviour", "get_enabled", "Boolean");
+            dll.MethodTypes("GameObject", "get_activeInHierarchy", "Boolean");
+            dll.MethodTypes("GameObject", "get_transform", "Transform");
+            dll.MethodTypes("Transform", "get_position", "Vector3");
+            dll.MethodTypes("Vector3", "get_zero", "Vector3");
         }
         Console.WriteLine($"PASS: {assertions} policy and installed-assembly contract assertions. Unity runtime behavior is not tested here.");
     }
 
     // Read metadata without loading Unity or invoking the game.
-    private sealed class AssemblyContract : IDisposable
+    private sealed partial class AssemblyContract : IDisposable
     {
         private readonly FileStream stream;
         private readonly PEReader pe;

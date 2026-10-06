@@ -3,7 +3,7 @@
 **Alpha with limited local play-testing.** Back up saves
 and use a disposable world. Record the game build, mod version and other mods.
 
-- Confirm the game loads the plugin and its log names Expanded Hordes 0.2.1.
+- Confirm the game loads the plugin and its log names Expanded Hordes 0.2.4.
 - Follow the [death/recycling checks](DEATH_RECYCLING.md#validation) during sustained combat.
   Check for errors or disabled-feature messages. Confirm HHMM shows the friendly
   name and current settings. Enable Debug Mode and restart to see the overlay
@@ -13,6 +13,7 @@ and use a disposable world. Record the game build, mod version and other mods.
   allow replacements and no new spawns arrive after the budget is exhausted.
 - Check the game's disabled-horde and every-N-nights choices. With budget left,
   spawning should end around native dawn, allowing the game's polling delay.
+- At night, check unfocused living horde zombies are re-sent toward the player after about 45 seconds standing still; movement resets the grace, Admin Panel's ZombiesIgnoreYou skips refocus, and pause, dawn, player death, ragdolls and other mods' vetoes remain respected.
 - Check Attraction shows only Attraction Range. Test nearby zombies at horde
   start in open terrain and near obstacles. Existing custom range values must
   survive an upgrade; an already configured Attraction Range takes precedence.
@@ -28,6 +29,16 @@ and use a disposable world. Record the game build, mod version and other mods.
   Check the BepInEx log for new errors or a ModMenu registration warning.
 - Compare running at 100% and 125%. Check ordinary zombies, walking and attacks
   stay normal, and survivors lose the running boost when spawning ends or at dawn.
+- Compare Arrival at its defaults with 4 directions and 400% rate, restarting
+  after changes. Look for several visible approach directions in open terrain.
+  Check that the living target and total budget still hold and kills refill faster.
+- Test 4 directions near a coast or cliff. Blocked directions should give way
+  to the others without preventing the horde from spawning.
+- Save and reload mid-horde with Arrival enabled. Check restored positions,
+  remaining budget and future spawns. Repeat around dawn.
+- Compare frame times at 100% and 400%, with cold and warm zombie groups and
+  frequent kills. Check stutter and the shorter Horde Run Speed boost.
+- With Smart Zombies enabled, confirm its reinforcements still appear normally.
 - Temporarily set both extra-type region gates to 1 and chances to 40%. Check
   large types and bosses for appearance, movement, combat, death and loot.
   Random chances do not guarantee every type in a short test. Restore settings.
