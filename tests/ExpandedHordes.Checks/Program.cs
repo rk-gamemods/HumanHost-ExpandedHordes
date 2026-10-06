@@ -9,7 +9,7 @@ using System.Reflection;
 using System.Collections.Immutable;
 using ExpandedHordes;
 
-internal static class Program
+internal static partial class Program
 {
     private static int assertions;
     private static void Check(bool condition, string message)
@@ -106,6 +106,7 @@ internal static class Program
 
         RefocusChecks.Run(Check);
         LivingSpecialChecks.Run(Check);
+        ArrivalChecks.Run(Check);
         SettingsOrderChecks.Run(Check);
         TelemetryChecks.Run(Check);
         DeathCategoryChecks.Run(Check);
@@ -133,6 +134,7 @@ internal static class Program
         }
         using (var dll = new AssemblyContract(Path.Combine(args[0], "Terrain.dll")))
         {
+            dll.Arrival();
             dll.Method("NPC_Horde_Mgr", "_Start");
             dll.Method("NPC_Horde_Mgr", "Get_Plan_To_Spawn_Count");
             dll.Method("NPC_Horde_Mgr", "StartHordeEvent", "isLoad");
@@ -232,7 +234,7 @@ internal static class Program
     }
 
     // Read metadata without loading Unity or invoking the game.
-    private sealed class AssemblyContract : IDisposable
+    private sealed partial class AssemblyContract : IDisposable
     {
         private readonly FileStream stream;
         private readonly PEReader pe;

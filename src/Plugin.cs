@@ -25,6 +25,7 @@ namespace ExpandedHordes
             SettingsPersistence.Initialize(Config);
             ModMenuIntegration.Register(this, ModSettings.MenuEntries(), Logger);
             FeatureRuntime.Install(Feature.Population, typeof(AiSetup), typeof(HordeAllowance), typeof(SpawnBudget));
+            HordeArrival.Install();
             FeatureRuntime.Install(Feature.Catalog, typeof(HordeSetup));
             if (FeatureRuntime.Enabled(Feature.Catalog))
             {
