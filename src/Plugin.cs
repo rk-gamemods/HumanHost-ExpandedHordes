@@ -33,6 +33,7 @@ namespace ExpandedHordes
                 FeatureRuntime.Install(Feature.Resistance, typeof(DamageResistance));
             }
             FeatureRuntime.Install(Feature.Attraction, typeof(HordeStart));
+            FeatureRuntime.Install(Feature.Refocus, typeof(HordeRefocusMembership));
             FeatureRuntime.Install(Feature.Movement, typeof(HordeRunSpeed));
             FeatureRuntime.Install(Feature.Corpses, typeof(CorpseRetention));
             FeatureRuntime.Install(Feature.DeathRecycling, typeof(HordeDeathRecycle), typeof(HordePoolReturn));
@@ -43,14 +44,15 @@ namespace ExpandedHordes
             Log.LogInfo($"Expanded Hordes {Version} loaded | game {Application.version} | base budget {ModSettings.Total.Value}, living {ModSettings.Living.Value}, shared AI {ModSettings.Allowance.Value}, run speed {ModSettings.RunSpeedPercent.Value}%; resistance regular/large/boss {ModSettings.RegularResistance.Value}/{ModSettings.LargeResistance.Value}/{ModSettings.BossResistance.Value}%; corpse target {ModSettings.CorpseLimit.Value}. Restart after configuration changes.");
         }
 
-        private void Update() { PerformanceMonitor.Update(); DebugHordeTrigger.Update(); }
+        private void Update() { PerformanceMonitor.Update(); DebugHordeTrigger.Update(); HordeRefocus.Update(); }
         private void OnGUI() => PerformanceMonitor.Draw();
         private void OnApplicationPause(bool paused) { if (paused) DebugHordeTrigger.Cancel(); PerformanceMonitor.Boundary(paused ? WindowEnd.Pause : WindowEnd.Resume); }
-        private void OnApplicationQuit() { DebugHordeTrigger.Stop(); PerformanceMonitor.Stop(); }
-        private void OnSceneUnloaded(Scene scene) { DebugHordeTrigger.Cancel(); PerformanceMonitor.Boundary(WindowEnd.SceneUnload); }
+        private void OnApplicationQuit() { HordeRefocus.Clear(); DebugHordeTrigger.Stop(); PerformanceMonitor.Stop(); }
+        private void OnSceneUnloaded(Scene scene) { HordeRefocus.Clear(); DebugHordeTrigger.Cancel(); PerformanceMonitor.Boundary(WindowEnd.SceneUnload); }
 
         private void OnDestroy()
         {
+            HordeRefocus.Clear();
             AdminPanelCompatibility.Stop();
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
             ModMenuIntegration.Unregister(this, Logger);

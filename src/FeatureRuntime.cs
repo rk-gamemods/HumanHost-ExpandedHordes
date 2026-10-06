@@ -7,7 +7,7 @@ using HarmonyLib;
 
 namespace ExpandedHordes
 {
-    internal enum Feature { Population, Catalog, Composition, Attraction, Movement, Resistance, Corpses, Diagnostics, Profiling, CorpseDiagnostics, Settings, DeathRecycling, Arrival }
+    internal enum Feature { Population, Catalog, Composition, Attraction, Movement, Resistance, Corpses, Diagnostics, Profiling, CorpseDiagnostics, Settings, DeathRecycling, Arrival, Refocus }
 
     // Patch ownership is per feature. A failed optional hook does not disable the horde.
     internal static class FeatureRuntime
@@ -84,7 +84,9 @@ namespace ExpandedHordes
             if (Failed.Add(feature))
             {
                 DisabledSummary = string.Join(", ", Failed);
-                Plugin.Log.LogError($"{feature} disabled for this session; native behavior is retained where possible. {error}");
+                string message = $"{feature} disabled for this session; native behavior is retained where possible. {error}";
+                if (feature == Feature.Refocus) Plugin.Log.LogWarning(message);
+                else Plugin.Log.LogError(message);
                 if (feature == Feature.Population)
                 {
                     try { PopulationOverrides.Restore(); }

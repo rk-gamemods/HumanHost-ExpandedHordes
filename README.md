@@ -112,6 +112,8 @@ At horde start, the mod automatically tries to draw nearby zombies toward you.
 and only attracts zombies already nearby. Walls and normal pursuit rules can
 still prevent a response.
 
+Idle horde zombies are re-sent toward the player after about 45 seconds standing still.
+
 ### More bodies left behind
 
 **Retained Corpse Limit** defaults to **300**, matching the vanilla menu's maximum,

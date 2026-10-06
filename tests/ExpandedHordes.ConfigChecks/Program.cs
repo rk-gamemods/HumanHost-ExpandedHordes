@@ -77,6 +77,7 @@ internal static class Program
                 unrelated.Value == "unmodified" && saved.Contains("Keep = unmodified"),
                 "Both bound legacy entries are removed while unrelated bound value is retained");
         }
+        RefocusAdminChecks.Run(root, Check);
         ModMenuChecks.Run(root, Check);
         Console.WriteLine("PASS: " + assertions + " BepInEx config and ModMenu integration assertions. Temporary fixtures are removed after this run.");
     }
