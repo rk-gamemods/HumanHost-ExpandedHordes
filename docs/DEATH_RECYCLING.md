@@ -14,7 +14,8 @@ reports version 0.8.316.
   `NPC_Spawner_Mgr.Delay_Back_Dead_NPC_To_Pool` now yields once before it
   breaks. The pool return therefore runs after `NPC_Input.On_Char_Died`
   disables the controller.
-- **Checked unchanged** in builds 25675256 (0.8.318) and 25710579 (0.8.3181).
+- **Checked unchanged** in builds 25675256 (0.8.318), 25710579 (0.8.3181)
+  and 25752290 (0.8.319); see the [current compatibility review](GAME_COMPATIBILITY.md).
 - **The guard is kept as a defence.** It acts only when it sees a pool reset
   inside the same death call, so on fixed builds it changes nothing. Its cost
   per death is a short list check. It applies again if the game ever returns to

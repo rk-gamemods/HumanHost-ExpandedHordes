@@ -167,8 +167,9 @@ the living horde target.
 ## Requirements and installation
 
 - Human Host on Windows, using its Unity Mono build.
-- BepInEx 5. The alpha was built against BepInEx 5.4.23.5 and Human Host Steam
-  build 25448142. Other game builds have not been verified.
+- BepInEx 5. Source validation passed against BepInEx 5.4.23.5 and Human Host
+  0.8.319, Steam build 25752290. See the [compatibility review](docs/GAME_COMPATIBILITY.md)
+  for evidence and the remaining in-game checks.
 - No additional gameplay mod is required. This build registers its settings
   with the optional Human Host Mod Menu 0.3.1 API for in-game editing; actual
   in-game UI behavior still needs testing. HHMM is a separate external editor
