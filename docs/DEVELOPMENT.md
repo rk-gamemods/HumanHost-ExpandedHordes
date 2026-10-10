@@ -5,6 +5,45 @@ the console checks under `tests/` share the small calculation classes directly.
 Settings in `ModSettings.cs` are authoritative. This is an alpha with limited
 local play-testing.
 
+## Completing issue work
+
+[AGENTS.md](../AGENTS.md#issue-and-pull-request-completion) owns the mandatory
+issue-completion policy. The agent completing the implementation PR performs
+the following checks as part of the same task:
+
+1. Before merging, list each addressed issue in the PR and distinguish complete
+   resolutions from partial work. Match the agreed acceptance criteria to the
+   implementation and validation evidence.
+2. After merging, confirm the PR is merged and its implementation is present in
+   `develop`. Record the merged PR or commit used for the acceptance decision.
+3. Comment on each fully resolved issue with the implementation link and
+   validation result, then explicitly close it as `completed` if it is still
+   open. Read its current state back from GitHub and confirm it is closed with
+   the correct reason. If automation already closed it, verify that result.
+4. For a partial resolution, comment on the issue with the exact unmet criteria,
+   next action and any blocker. Keep required runtime checks separate from
+   automated evidence; existing general play-test guidance is not itself an
+   unmet requirement for every issue.
+5. Include the verified issue dispositions with the PR and commit in the task
+   handoff. An unverified closure or failed GitHub operation remains unfinished
+   work that the completing agent must report.
+
+GitHub applies PR-description closing keywords only when the PR targets the
+repository's default branch, which is `main`. A `Closes #N` line in a PR targeting
+`develop` does not close the issue. This is why step 3 requires an explicit
+state check and closure. See the
+[GitHub closing-keyword documentation](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue).
+
+Before a Workshop update, the release agent inventories all PRs and addressed
+issues included since the previous published release, including work completed
+by other agents. Reconcile each issue against the merged `main` contents and
+record its verified disposition before publication. After publication, recheck
+those issue states against the published payload's commit before declaring the
+release complete. Correct missed closures during that task; the user must not
+need to request a separate cleanup of completed, released features.
+
+## Settings persistence
+
 `SettingsOrder` preserves section/key identities, values and metadata while
 ordering the settings for display. `SettingsPersistence` applies it only to
 this plugin's `ConfigFile` after `Save`, under BepInEx's `_ioLock`, using an
