@@ -15,6 +15,8 @@ reports version 0.8.316.
   breaks. The pool return therefore runs after `NPC_Input.On_Char_Died`
   disables the controller.
 - **Checked unchanged** in builds 25675256 (0.8.318) and 25710579 (0.8.3181).
+  The overflow yield and full delay coroutine remain unchanged in build
+  25986463 (0.8.323); see the [compatibility review](GAME_COMPATIBILITY_0.8.323.md).
 - **The guard is kept as a defence.** It acts only when it sees a pool reset
   inside the same death call, so on fixed builds it changes nothing. Its cost
   per death is a short list check. It applies again if the game ever returns to
