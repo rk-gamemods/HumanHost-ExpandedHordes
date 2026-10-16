@@ -238,6 +238,8 @@ paths or other private information before posting them.
 
 Developers can read the [code overview](docs/DEVELOPMENT.md). This repository
 contains the mod's own source and tests, not game assemblies or decompiled game code.
+The [Human Host 0.8.323 compatibility review](docs/GAME_COMPATIBILITY_0.8.323.md)
+records the source and assembly checks and the remaining gameplay checks.
 
 ## License
 
