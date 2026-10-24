@@ -9,13 +9,17 @@ zombies can arrive, how many can be alive together, how fast they run, and how
 much damage they resist. Add chances for large zombies and bosses, or keep more
 bodies around after the fighting.
 
-This repository contains only Expanded Hordes. Version 0.2.0 is available on
+This repository contains only Expanded Hordes. As checked on 2026-10-24, version
+0.2.2 is available on
 [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3806576633).
+The same version has a [GitHub release](https://github.com/rk-gamemods/HumanHost-ExpandedHordes/releases/tag/v0.2.2).
 See the performance notes below for observations from local play-testing.
 
-The 0.2.1 development build adds [death/recycling movement protection](docs/DEATH_RECYCLING.md)
-for horde zombies after simultaneous kills. Gameplay verification of that guard
-is pending; it has not been published to Workshop.
+The source tree is version 0.2.4. Its arrival rate/direction settings and idle-horde
+refocus are not in published 0.2.2. The features and settings below describe this
+source tree. Published 0.2.2 already includes the
+[death/recycling guard](docs/DEATH_RECYCLING.md) and Admin Panel movement defence;
+publication does not establish their compatibility with every game build.
 
 ## What it changes
 
@@ -167,15 +171,18 @@ the living horde target.
 ## Requirements and installation
 
 - Human Host on Windows, using its Unity Mono build.
-- BepInEx 5. The alpha was built against BepInEx 5.4.23.5 and Human Host Steam
-  build 25448142. Other game builds have not been verified.
+- BepInEx 5. Both 0.2.2 and 0.2.4 source builds and assembly contracts were checked
+  with BepInEx 5.4.23.5 and Human Host 0.8.326, Steam build 26180432.
+  Gameplay on that build remains unverified; see the
+  [compatibility review](docs/GAME_COMPATIBILITY_0.8.326.md).
 - No additional gameplay mod is required. This build registers its settings
   with the optional Human Host Mod Menu 0.3.1 API for in-game editing; actual
   in-game UI behavior still needs testing. HHMM is a separate external editor
   for the same BepInEx config.
 
-There is no prebuilt download attached to this initial source publication.
-See [Building from source](docs/BUILDING.md) to produce the DLL.
+For published 0.2.2, use the Workshop item or GitHub release linked above.
+See [Building from source](docs/BUILDING.md) to produce the development DLL.
+The following manual installation steps apply to a built DLL.
 
 1. Close the game.
 2. Create `BepInEx/plugins/ExpandedHordes/` inside the game's installation folder.
@@ -238,8 +245,9 @@ paths or other private information before posting them.
 
 Developers can read the [code overview](docs/DEVELOPMENT.md). This repository
 contains the mod's own source and tests, not game assemblies or decompiled game code.
-The [Human Host 0.8.323 compatibility review](docs/GAME_COMPATIBILITY_0.8.323.md)
-records the source and assembly checks and the remaining gameplay checks.
+The [Human Host 0.8.326 compatibility review](docs/GAME_COMPATIBILITY_0.8.326.md)
+records checks for published 0.2.2 source and development 0.2.4, with remaining
+gameplay checks. The [0.8.323 review](docs/GAME_COMPATIBILITY_0.8.323.md) is historical.
 
 ## License
 

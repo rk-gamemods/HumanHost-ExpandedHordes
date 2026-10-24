@@ -1,7 +1,8 @@
 # Preventing disabled movement after death and reuse
 
-Expanded Hordes 0.2.1 includes a guard for horde zombies recycled during their
-own death callback. It prevents a confirmed route to living zombies with
+Introduced in Expanded Hordes 0.2.1, this guard is included in published 0.2.2
+and development 0.2.4. It protects horde zombies recycled during their own
+death callback and prevents a confirmed route to living zombies with
 disabled movement and gravity updates. It does not move zombies, change health,
 edit saves, or repair every possible cause of airborne characters.
 
@@ -16,7 +17,7 @@ reports version 0.8.316.
   disables the controller.
 - **Checked unchanged** in builds 25675256 (0.8.318) and 25710579 (0.8.3181).
   The overflow yield and full delay coroutine remain unchanged in build
-  25986463 (0.8.323); see the [compatibility review](GAME_COMPATIBILITY_0.8.323.md).
+  26180432 (0.8.326); see the [compatibility review](GAME_COMPATIBILITY_0.8.326.md).
 - **The guard is kept as a defence.** It acts only when it sees a pool reset
   inside the same death call, so on fixed builds it changes nothing. Its cost
   per death is a short list check. It applies again if the game ever returns to

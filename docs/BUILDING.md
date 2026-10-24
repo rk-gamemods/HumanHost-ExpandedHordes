@@ -1,6 +1,6 @@
 # Building from source
 
-This produces an **untested alpha**, not a certified working release.
+This builds an alpha. Host checks do not certify gameplay or save safety.
 You need a .NET SDK capable of building .NET 8 projects, your own Human Host
 installation and BepInEx 5 installed in that game folder. PowerShell examples:
 
@@ -39,6 +39,11 @@ The initial alpha build passed with zero warnings/errors and 245 policy and
 installed-assembly checks against Steam build 25448142. Those checks cover rules
 and expected patch targets, not actual Harmony detours, spawning, combat,
 rendering, HHMM UI or performance. Follow [TESTING.md](TESTING.md) for runtime checks.
+
+The [0.8.326 compatibility review](GAME_COMPATIBILITY_0.8.326.md) records later
+build and contract results for published 0.2.2 source and development 0.2.4,
+including the config, Admin Panel and recycling test commands. Source 0.2.4
+has not been published to Workshop as of that review.
 
 The issue #1 diagnostics work adds a pure mode that needs no game files:
 

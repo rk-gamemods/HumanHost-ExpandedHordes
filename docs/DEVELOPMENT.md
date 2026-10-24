@@ -109,8 +109,10 @@ Unknown entries remain intact, and malformed files are left unchanged.
 - Optional diagnostics observe `GetValidSpawnPosition`, `Try_Get_Spawn_Context`,
   `Save_Horde_Data_To_Disk`, `Zombie_Agent._Update` and corpse creation.
 
-Native method names and creature identities were checked against Steam build
-25448142. Recheck them after game updates. The repository deliberately excludes
+Native method names and creature identities were rechecked against Human Host
+0.8.326, Steam build 26180432; see the
+[compatibility review](GAME_COMPATIBILITY_0.8.326.md) for evidence and limits.
+Recheck them after game updates. The repository deliberately excludes
 decompiled game sources and game assemblies; build against your own installation.
 
 ## Adding a creature type

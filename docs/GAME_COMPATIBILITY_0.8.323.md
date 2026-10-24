@@ -1,5 +1,10 @@
 # Human Host 0.8.323 compatibility review
 
+Historical review of development 0.2.4 source, completed on 2026-10-16.
+This is not a record of a 0.2.4 publication. See the
+[0.8.326 review](GAME_COMPATIBILITY_0.8.326.md) for the later game update and
+separate checks of published 0.2.2 source and development 0.2.4.
+
 Expanded Hordes 0.2.4 needs no runtime-code change for Human Host 0.8.323,
 Steam build 25986463, based on the source, serialized-catalog and installed-assembly
 review completed on 2026-10-16. In-game compatibility remains unverified for this

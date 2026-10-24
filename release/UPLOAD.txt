@@ -1,3 +1,20 @@
+PUBLICATION STATUS, CHECKED 2026-10-24
+
+Published Workshop version: 0.2.2
+https://steamcommunity.com/sharedfiles/filedetails/?id=3806576633
+GitHub release:
+https://github.com/rk-gamemods/HumanHost-ExpandedHordes/releases/tag/v0.2.2
+
+Current source version: 0.2.4, not published to Workshop.
+Source integration and release preparation do not prove publication. See
+docs/GAME_COMPATIBILITY_0.8.326.md for the two reviewed source boundaries.
+AGENTS.md owns the current develop/main and publication gates.
+
+ORIGINAL 0.2.0 UPLOAD RECORD (HISTORICAL)
+
+The paths and procedure below describe the original upload. They are not the
+current release workflow or evidence of a later publication.
+
 EXPANDED HORDES 0.2.0
 
 Published September 23, 2026:

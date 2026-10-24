@@ -3,7 +3,12 @@
 **Alpha with limited local play-testing.** Back up saves
 and use a disposable world. Record the game build, mod version and other mods.
 
-- Confirm the game loads the plugin and its log names Expanded Hordes 0.2.4.
+The [0.8.326 compatibility review](GAME_COMPATIBILITY_0.8.326.md) records source
+and assembly checks, with gameplay still pending. Published Workshop 0.2.2 does
+not include the Arrival settings or idle refocus; those checks apply to 0.2.4 source.
+
+- Confirm the game loads the intended plugin version: 0.2.2 for the published
+  package or 0.2.4 for current source. Record its load line and game build.
 - Follow the [death/recycling checks](DEATH_RECYCLING.md#validation) during sustained combat.
   Check for errors or disabled-feature messages. Confirm HHMM shows the friendly
   name and current settings. Enable Debug Mode and restart to see the overlay
@@ -61,10 +66,16 @@ and use a disposable world. Record the game build, mod version and other mods.
 - Confirm ordinary attracted zombies do not gain resistance. Leave horde
   survivors after dawn and save/reload them: resistance should remain, using
   current settings. Later ordinary spawns must not inherit the horde effect.
+- On 0.8.326, repeat melee, arrow and vehicle/rotor hits with resistance enabled.
+  Check fall damage and repeated combat after corpse/NPC reuse. Distinguish the
+  game's new melee diagnostics from Expanded Hordes errors.
 - Check sustained kills keep allowing living replacements when corpse retention
   fills. Try 300, then 500 retained bodies, with enough corpse lifetime to observe
   the difference. Check expiry, distance hiding, looting and reload. Temporary
   ragdolls and hidden saved bodies are not the same as visible settled corpses.
+- Remove or fell trees with settled bodies nearby. Native tree cleanup may
+  return those bodies to the pool even below the configured retention limit;
+  check that corpse diagnostics follow those removals without adding deaths.
 - Turn profiling on, restart and collect several 15-second samples during idle,
   a horde and heavy corpse accumulation. Missing CPU/GPU data must say unavailable.
   Turn Debug Mode and profiling off and restart; the overlay, extra summaries
