@@ -1,26 +1,23 @@
-EXPANDED HORDES 0.2.0
+EXPANDED HORDES 0.2.4
 
-Published September 23, 2026:
-https://steamcommunity.com/sharedfiles/filedetails/?id=3806576633
-Workshop item ID: 3806576633
+Workshop item: https://steamcommunity.com/sharedfiles/filedetails/?id=3806576633
+GitHub releases: https://github.com/rk-gamemods/HumanHost-ExpandedHordes/releases
 
-Cover: upload-images/cover-scream.jpg
-Gallery, in order:
-01-horde-size.jpg
-02-horde-composition.jpg
-03-speed-resistance.jpg
-04-until-dawn.jpg
+AGENTS.md owns branch integration, issue disposition and publication gates.
+Build and package the existing version from clean main at origin/main, with
+develop aligned. Do not create another version for a compatibility-only review.
 
-TO UPDATE THIS RELEASE
-1. Open Human Host's Workshop, then Upload Mod.
-2. Use Update on the existing Expanded Hordes item. Select the content folder.
-3. For description or gallery changes, use Owner controls on the Steam page.
-   Add/edit images & videos accepts the four numbered JPGs.
+The content root contains exactly:
+  ExpandedHordes/ExpandedHordes.dll
+  ExpandedHordes/LICENSE.txt
 
-Only select content for the mod upload. It contains the DLL and license.
-Use the JPGs for uploads; keep the original PNGs for future use.
-The artwork is promotional concept art, not gameplay screenshots.
+Publish that same payload to the existing Workshop item and GitHub release.
+Verify the plugin/package version, source commit and DLL/ZIP SHA-256 values.
+After Workshop publication, download the item and compare the DLL hash to the
+release payload. A source version or merged release-preparation commit alone
+does not prove publication.
 
-The original 2.3 MB cover PNG failed during submission. The 318 KB JPG uploaded
-successfully. The game limits the mod folder to 100 MiB. Steam's gallery editor
-allows up to 8 MB per batch; each supplied JPG is below 1 MB.
+For the game's Upload Mod screen, update the existing item and select only
+the content root. Keep game assemblies, configuration and logs out of it.
+Content-only updates preserve the existing description and promotional media.
+See docs/GAME_COMPATIBILITY_0.8.326.md for validation and gameplay limits.

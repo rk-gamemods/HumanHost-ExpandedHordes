@@ -35,9 +35,10 @@ The plugin targets .NET Standard 2.1. Tests target .NET 8 and inspect game assem
 metadata without launching Unity. All game/BepInEx references use `Private=false`
 so they are not copied into the plugin output. No game files are distributed here.
 
-The initial alpha build passed with zero warnings/errors and 245 policy and
-installed-assembly checks against Steam build 25448142. Those checks cover rules
-and expected patch targets, not actual Harmony detours, spawning, combat,
+Version 0.2.4 passed with zero warnings/errors against Human Host 0.8.326,
+Steam build 26180432. The [compatibility report](GAME_COMPATIBILITY_0.8.326.md)
+records policy, installed-assembly, configuration, Admin Panel and recycling
+checks. These do not establish actual Unity detours, spawning, combat,
 rendering, HHMM UI or performance. Follow [TESTING.md](TESTING.md) for runtime checks.
 
 The issue #1 diagnostics work adds a pure mode that needs no game files:

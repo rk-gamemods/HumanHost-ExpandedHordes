@@ -9,13 +9,13 @@ zombies can arrive, how many can be alive together, how fast they run, and how
 much damage they resist. Add chances for large zombies and bosses, or keep more
 bodies around after the fighting.
 
-This repository contains only Expanded Hordes. Version 0.2.0 is available on
-[Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3806576633).
-See the performance notes below for observations from local play-testing.
-
-The 0.2.1 development build adds [death/recycling movement protection](docs/DEATH_RECYCLING.md)
-for horde zombies after simultaneous kills. Gameplay verification of that guard
-is pending; it has not been published to Workshop.
+This repository contains one plugin, Expanded Hordes, version 0.2.4. It includes
+arrival rate/direction controls, idle-horde refocusing and
+[death/recycling movement protection](docs/DEATH_RECYCLING.md).
+Install it through [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3806576633)
+or [GitHub releases](https://github.com/rk-gamemods/HumanHost-ExpandedHordes/releases).
+See the [current compatibility evidence](docs/GAME_COMPATIBILITY_0.8.326.md)
+and the performance notes below for validation limits.
 
 ## What it changes
 
@@ -167,15 +167,16 @@ the living horde target.
 ## Requirements and installation
 
 - Human Host on Windows, using its Unity Mono build.
-- BepInEx 5. The alpha was built against BepInEx 5.4.23.5 and Human Host Steam
-  build 25448142. Other game builds have not been verified.
+- BepInEx 5. The current source passed build and installed-assembly checks against
+  BepInEx 5.4.23.5 and Human Host 0.8.326 / Steam build 26180432. Fresh Unity
+  gameplay on that game build remains unverified.
 - No additional gameplay mod is required. This build registers its settings
   with the optional Human Host Mod Menu 0.3.1 API for in-game editing; actual
   in-game UI behavior still needs testing. HHMM is a separate external editor
   for the same BepInEx config.
 
-There is no prebuilt download attached to this initial source publication.
-See [Building from source](docs/BUILDING.md) to produce the DLL.
+Use the Workshop item or GitHub release package above for the DLL, or follow
+[Building from source](docs/BUILDING.md).
 
 1. Close the game.
 2. Create `BepInEx/plugins/ExpandedHordes/` inside the game's installation folder.
